@@ -1,0 +1,471 @@
+:root {
+  --red: #c1121f;
+  --red-dark: #8e0e18;
+  --bg: #ffffff;
+  --panel: #ffffff;
+  --text: #111827;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 2px 4px rgba(16, 24, 40, 0.06);
+}
+
+#root {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  text-align: initial;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.HeaderBar {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  z-index: 50;
+}
+.HeaderBar.red { background: var(--red); border-bottom-color: var(--red-dark); }
+.HeaderBar.red .HeaderInner { color: #fff; }
+.HeaderBar.red .NavLink { color: #fff; }
+.HeaderBar.red .ActionLink { background: rgba(255,255,255,0.95); color: var(--red-dark); border-color: rgba(255,255,255,0.9); }
+.HeaderBar.red .LogoTitle, .HeaderBar.red .LogoSub { color: #fff; }
+.HeaderBar.red .LogoMark { background: rgba(255,255,255,0.95); border-color: rgba(255,255,255,0.9); color: var(--red-dark); }
+.HeaderInner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  color: var(--text);
+}
+.LogoArea { display: inline-flex; align-items: center; }
+.LogoImg { height: 36px; width: auto; display: block; }
+.LogoBrand { display: inline-flex; align-items: center; gap: 10px; }
+.LogoMark { width: 36px; height: 36px; border-radius: 8px; background: #fff; border: 1px solid var(--border); display: grid; place-items: center; color: var(--red); box-shadow: var(--shadow); }
+.LogoMark svg { width: 24px; height: 24px; }
+.LogoText { display: grid; line-height: 1; }
+.LogoTitle { font-weight: 900; letter-spacing: 0.06em; color: var(--text); }
+.LogoSub { font-size: 12px; font-weight: 800; color: var(--muted); }
+.Logo {
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.Nav {
+  display: flex;
+  gap: 18px;
+}
+.NavLink {
+  color: var(--text);
+}
+.ActionLink {
+  color: var(--text);
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.Hero {
+  color: #fff;
+}
+.hero-red { background: linear-gradient(90deg, var(--red-dark), var(--red)); }
+.HeroInner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 24px;
+  align-items: center;
+}
+.HeroTitle {
+  font-size: 42px;
+  line-height: 1.1;
+  margin: 0 0 12px;
+}
+.HeroTitle.Large { font-size: 44px; }
+.HeroText {
+  color: #f2f2f2;
+  margin: 0 0 18px;
+}
+.PrimaryBtn {
+  background: #fff;
+  color: var(--red-dark);
+  border: 1px solid transparent;
+  padding: 10px 16px;
+  border-radius: 10px;
+}
+.PrimaryBtn:hover {
+  border-color: #fff;
+}
+.Hero .PrimaryBtn:hover { background: var(--red); color: #fff; border-color: var(--red); }
+.PosterWrap { display: flex; justify-content: center; }
+.PosterCard { width: 520px; height: 300px; border-radius: 18px; overflow: hidden; background: #0b1b3a; box-shadow: 0 16px 28px rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.15); }
+.PosterImg { width: 100%; height: 100%; object-fit: cover; display: block; }
+.HeroControls { position: relative; display: flex; justify-content: space-between; max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+.ArrowBtn { width: 40px; height: 40px; border-radius: 12px; background: rgba(0,0,0,0.7); color: #fff; border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 10px 20px rgba(0,0,0,0.25); }
+.Dots { display: flex; gap: 10px; max-width: 1200px; margin: 14px auto 0; padding: 0 20px; }
+.Dot { width: 56px; height: 4px; border-radius: 999px; background: rgba(255,255,255,0.35); }
+.Dot.active { background: #3b82f6; }
+
+.BackTop { position: absolute; left: 20px; top: 16px; z-index: 5; }
+.BackBtn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px; background: rgba(255,255,255,0.92); border: 1px solid rgba(229,231,235,0.9); box-shadow: 0 10px 20px rgba(0,0,0,0.25); color: #0f172a; font-weight: 700; }
+.BackBtn:hover { background: var(--red); color: #fff; border-color: var(--red); }
+
+.DetailHero { position: relative; background: #0b1220; color: #fff; }
+.DetailBackdrop { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0.25; }
+.DetailInner { position: relative; display: grid; grid-template-columns: 260px 1fr; gap: 28px; padding-top: 40px; padding-bottom: 40px; }
+.DetailPoster { height: 360px; border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,0.2); }
+.DetailContent { display: grid; gap: 12px; align-content: start; }
+.Badge { display: inline-flex; padding: 6px 10px; border-radius: 999px; background: #2563eb; color: #fff; font-weight: 700; width: fit-content; }
+.DetailTitle { margin: 0; font-size: 44px; font-weight: 800; }
+.DetailMeta { display: inline-flex; align-items: center; gap: 10px; }
+.DotSep { opacity: 0.7; }
+.CTAGroup { display: inline-flex; gap: 12px; margin-top: 8px; }
+.OutlineBtn { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,0.4); padding: 10px 16px; border-radius: 10px; }
+
+.DetailBelow { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 28px; padding-top: 20px; padding-bottom: 40px; }
+.DetailCol { display: grid; gap: 10px; align-content: start; }
+.DetailHeading { margin: 0; font-size: 14px; letter-spacing: 0.06em; color: var(--muted); font-weight: 800; }
+.DetailList { font-weight: 600; color: var(--text); }
+.DetailText { color: var(--text); }
+.DetailStat { font-size: 28px; font-weight: 800; }
+.DetailGenres { margin-top: 16px; font-size: 22px; font-weight: 800; color: #0f172a; }
+
+.Page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 28px 20px;
+}
+.SectionTitle {
+  font-size: 24px;
+  margin: 0 0 20px;
+  color: var(--text);
+}
+.Tabs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+.Tab {
+  font-weight: 700;
+  color: var(--muted);
+  padding: 8px 4px;
+  font-size: 24px;
+  letter-spacing: 0.01em;
+}
+.Tab.active {
+  color: var(--red);
+  border-bottom: 3px solid var(--red);
+}
+.FilterBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  background: #fff;
+  box-shadow: var(--shadow);
+  margin-bottom: 20px;
+}
+.FilterLeft {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.FilterActions { display: inline-flex; gap: 10px; }
+.FilterBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #f9fafb;
+  color: #374151;
+}
+.FilterIcon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: #f3f4f6;
+  border: 1px solid var(--border);
+}
+.FilterText { color: var(--muted); }
+.Grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.MoviesGrid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+@media (max-width: 1200px) { .MoviesGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 900px) { .MoviesGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .MoviesGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.ScheduleList { display: grid; gap: 28px; }
+.ScheduleItem { display: grid; grid-template-columns: 220px 1fr; gap: 24px; align-items: start; }
+.SchedulePoster { height: 320px; border-radius: 16px; overflow: hidden; border: 1px solid var(--border); box-shadow: 0 12px 24px rgba(16, 24, 40, 0.08); }
+.ScheduleRight { display: grid; gap: 8px; align-content: start; }
+.ScheduleTitle { margin: 0; font-size: 20px; font-weight: 700; }
+.BuyRow { padding: 8px 0 6px; }
+.BuyBtn { display: inline-flex; align-items: center; justify-content: center; width: 60%; padding: 16px; border-radius: 16px; background: #eef2ff; color: #1f2937; border: 1px solid #e5e7eb; font-weight: 700; }
+
+/* Horarios (chips de tiempo) */
+.TimesLang { display: flex; align-items: center; justify-content: center; padding: 8px; font-weight: 800; color: var(--red-dark); }
+.TimesRow { display: flex; gap: 14px; flex-wrap: wrap; }
+.TimeChip { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 6px; padding: 10px 14px; border-radius: 16px; background: #fff; border: 1px solid var(--border); box-shadow: var(--shadow); color: inherit; text-decoration: none; }
+.TimeFormat { font-size: 10px; letter-spacing: 0.08em; color: #6b7280; text-transform: uppercase; }
+.TimeText { font-weight: 800; color: var(--red-dark); }
+.SeatBadge { width: 24px; height: 24px; border-radius: 999px; background: var(--red); display: grid; place-items: center; }
+.SeatBadge svg { color: #fff; }
+.TimeChip:hover { border-color: var(--red); }
+.TimeChip.active { border-color: var(--red); background: #ffe4e6; }
+.DateChip.active { background: #fee2e2; border-color: #fecaca; color: #991b1b; }
+
+.Card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  color: var(--text);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.Movie {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.MovieMedia {
+  height: 320px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #f3f4f6;
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 24px rgba(16, 24, 40, 0.08);
+}
+.MoviePoster { width: 100%; height: 100%; object-fit: cover; display: block; }
+.MovieBody { padding: 0 2px 6px; }
+.MovieChips {
+  display: flex;
+  gap: 10px;
+  margin: 4px 0 8px 0;
+}
+.Chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  font-size: 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #f9fafb;
+  color: #374151;
+}
+.Chip.rating { background: #dcfce7; border-color: #86efac; color: #065f46; }
+.Chip.rating.green { background: #dcfce7; border-color: #86efac; color: #065f46; }
+.Chip.rating.yellow { background: #fff3c4; border-color: #facc15; color: #92400e; }
+.Chip.time { background: #f3f4f6; border-color: var(--border); color: #374151; }
+.Chip.status.blue { background: #e8f0fe; border-color: #93c5fd; color: #1e40af; }
+.Chip.status.green { background: #dcfce7; border-color: #86efac; color: #065f46; }
+.MovieTitle {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.MovieActions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.SecondaryBtn {
+  background: #fff;
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 10px 16px;
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+}
+.FootLink {
+  display: inline-block;
+  color: #2563eb;
+  font-size: 14px;
+}
+
+.ActionIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: #f3f4f6;
+  border: 1px solid var(--border);
+  font-size: 22px;
+  margin-bottom: 10px;
+}
+.ActionTitle {
+  margin: 0 0 8px;
+}
+.ActionText {
+  margin: 0;
+  color: var(--muted);
+}
+
+.FooterBar {
+  background: #f1f5f9;
+  border-top: 1px solid var(--border);
+}
+.FooterAccent { height: 6px; background: var(--red); }
+.FooterInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--muted);
+}
+.FooterGrid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; align-items: start; }
+.FooterCol { display: grid; gap: 10px; align-content: start; }
+.FooterBrands { display: inline-flex; gap: 8px; flex-wrap: wrap; }
+.FooterBrand { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px; background: #fff; border: 1px solid var(--border); font-weight: 800; color: var(--text); box-shadow: var(--shadow); }
+.FooterFollow { font-weight: 800; color: var(--text); }
+.FooterSocial { display: inline-flex; align-items: center; gap: 10px; }
+.SocialIcon { width: 36px; height: 36px; border-radius: 999px; display: grid; place-items: center; background: #fff; border: 1px solid var(--border); color: var(--red-dark); box-shadow: var(--shadow); }
+.SocialIcon:hover { filter: brightness(0.97); }
+.FooterMap iframe { width: 100%; height: 160px; border: 0; border-radius: 12px; box-shadow: var(--shadow); }
+.FooterLeft {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.FooterMark {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--red);
+}
+
+.AuthWrap { position: relative; display: grid; place-items: center; padding: 40px 20px; }
+.AuthCard { width: 100%; max-width: 460px; background: #fff; border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); padding: 22px; }
+.AuthTitle { margin: 0 0 12px; font-size: 26px; font-weight: 800; color: var(--text); }
+.AuthForm { display: grid; gap: 12px; }
+.InputRow { display: grid; gap: 6px; }
+.InputLabel { font-size: 13px; color: var(--muted); font-weight: 700; }
+.TextInput { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: #f9fafb; font-size: 14px; color: var(--text); }
+.FormError { color: #b91c1c; font-weight: 600; }
+.FormActions { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }
+.SubmitBtn { background: var(--red); color: #fff; border: 1px solid var(--red); padding: 10px 16px; border-radius: 10px; font-weight: 700; }
+.SubmitBtn:hover { filter: brightness(1.05); }
+.AltLink { color: #2563eb; }
+
+/* Login landing */
+.LoginLanding { width: 100%; max-width: 640px; text-align: center; display: grid; gap: 16px; align-content: start; }
+.LoginTitle { margin: 0; font-size: 28px; font-weight: 800; color: #0f172a; }
+.BrandClub { color: #f97316; font-weight: 900; letter-spacing: 0.08em; }
+.BrandSayab { color: #0b1b3a; font-weight: 900; }
+.LoginSubtitle { color: var(--muted); margin: 2px 0 6px; }
+.LoginPrimary { width: 100%; padding: 14px; border-radius: 16px; background: var(--red); color: #fff; border: 1px solid var(--red); font-weight: 800; }
+.LoginPrimary:hover { filter: brightness(1.05); }
+.LoginOr { color: var(--muted); font-weight: 800; }
+.LoginSecondary { display: inline-block; width: 100%; padding: 12px; border-radius: 16px; border: 2px solid var(--red); color: var(--red); font-weight: 800; text-align: center; }
+.BrandSayab { color: var(--red-dark); font-weight: 900; }
+
+/* Comprar boletos */
+.BuyHero { position: relative; background: #0b1220; color: #fff; }
+.BuyHeroBackdrop { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0.25; }
+.BuyHeroInner { position: relative; display: grid; grid-template-columns: 120px 1fr; gap: 18px; padding-top: 26px; padding-bottom: 26px; align-items: center; }
+.BuyBrand { width: 120px; height: 120px; border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 12px 24px rgba(0,0,0,0.3); }
+.BuyLogo { width: 100%; height: 100%; object-fit: cover; display: block; }
+.BuyTitle { margin: 0; font-size: 34px; font-weight: 800; }
+.BuyLayout { display: grid; grid-template-columns: 3fr 1fr; gap: 28px; padding-top: 20px; padding-bottom: 40px; }
+.BuyLeft { display: grid; gap: 16px; align-content: start; }
+.DatesBar { display: flex; gap: 10px; flex-wrap: wrap; }
+.DateChip { display: inline-flex; align-items: center; padding: 8px 12px; border-radius: 999px; border: 1px solid var(--border); background: #f9fafb; color: #374151; font-weight: 700; }
+.DateChip.active { background: #fee2e2; border-color: #fecaca; color: #991b1b; }
+.TimeChip:hover { border-color: var(--red); }
+.VenueTitle { margin: 0; font-size: 18px; font-weight: 700; color: var(--text); }
+.TimeChips { display: flex; gap: 10px; flex-wrap: wrap; }
+.TimeChip { display: inline-flex; align-items: center; padding: 10px 14px; border-radius: 12px; background: #fff; border: 1px solid var(--border); box-shadow: var(--shadow); font-weight: 700; }
+.CartPanel { background: #fff; border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); padding: 22px; display: grid; gap: 14px; align-content: start; }
+.CartHeader { display: flex; align-items: center; justify-content: space-between; font-weight: 800; color: #fff; background: #0b1b3a; padding: 12px 16px; border-radius: 12px; }
+.CartHeaderTitle { display: inline-flex; align-items: center; gap: 8px; }
+.CartPrice { font-weight: 800; color: #fff; }
+.CartItem { display: grid; grid-template-columns: 1fr; gap: 12px; align-items: start; }
+.CartPoster { display: none; }
+.CartBody { display: grid; gap: 6px; }
+.CartTitle { margin: 0; font-size: 16px; font-weight: 700; }
+.CartMeta { font-size: 13px; color: var(--muted); }
+.SeatsTitle { margin-top: 8px; font-weight: 800; color: var(--text); }
+.SeatsList { display: grid; gap: 10px; margin-top: 6px; }
+.SeatItem { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--border); }
+.SeatItem.muted { color: var(--muted); border-top: none; }
+.SeatIcon { width: 32px; height: 32px; border-radius: 8px; background: #f3f4f6; border: 1px solid var(--border); display: grid; place-items: center; color: var(--red-dark); }
+.SeatLine { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; color: var(--text); }
+.SeatPerson { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); }
+.CartActions { display: grid; gap: 10px; margin-top: 8px; }
+.CartPrimary { width: 100%; padding: 14px; border-radius: 16px; background: var(--red); color: #fff; border: 1px solid var(--red); font-weight: 800; }
+.CartPrimary:hover { filter: brightness(1.05); }
+.CartPrimary:disabled { opacity: 0.6; cursor: not-allowed; }
+.CartSecondary { width: 100%; padding: 12px; border-radius: 16px; background: #fff; color: #0f172a; border: 1px solid var(--border); font-weight: 800; }
+
+/* Modal boletos */
+.ModalOverlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); display: grid; place-items: center; z-index: 100; }
+.ModalCard { width: 92vw; max-width: 540px; background: #fff; border-radius: 16px; border: 1px solid var(--border); box-shadow: var(--shadow); overflow: hidden; }
+.ModalHeader { display: flex; align-items: center; justify-content: space-between; padding: 16px; background: #111111; color: #fff; }
+.ModalTitle { font-weight: 800; }
+.ModalClose { background: #fff; color: #111111; border: 1px solid #111111; width: 36px; height: 36px; border-radius: 999px; display: flex; align-items: center; justify-content: center; line-height: 0; font-size: 0; padding: 0; box-sizing: border-box; }
+.ModalClose svg { display: block; }
+.ModalBody { padding: 16px; }
+.ModalSectionTitle { font-weight: 800; color: var(--text); margin-bottom: 10px; }
+.TicketList { display: grid; gap: 12px; }
+.TicketRow { display: grid; grid-template-columns: 1fr 1fr auto; align-items: center; gap: 10px; background: #f9fafb; border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+.TicketLeft { font-weight: 800; color: var(--text); }
+.TicketMid { color: var(--text); font-weight: 700; }
+.TicketRight { display: inline-flex; align-items: center; gap: 8px; }
+.CircleBtn { width: 36px; height: 36px; border-radius: 999px; border: 1px solid #111111; background: #fff; display: flex; align-items: center; justify-content: center; line-height: 0; color: #111111; padding: 0; box-sizing: border-box; }
+.CircleBtn svg { display: block; }
+.CircleBtn.primary { background: var(--red); border-color: var(--red); color: #fff; }
+.CircleBtn:hover { filter: brightness(0.97); }
+.TicketCount { width: 24px; text-align: center; font-weight: 800; line-height: 1; }
+.ModalFooter { display: grid; gap: 10px; padding: 16px; }
+.ModalPrimary { width: 100%; padding: 14px; border-radius: 14px; background: var(--red); border: 1px solid var(--red); color: #fff; font-weight: 800; }
+.ModalPrimary:disabled { opacity: 0.6; cursor: not-allowed; }
+.ModalNote { text-align: center; color: var(--muted); }
+
+/* Horarios y asientos */
+.TimesLang { display: flex; align-items: center; justify-content: center; padding: 8px; font-weight: 800; color: var(--red-dark); }
+.TimesRow { display: flex; gap: 14px; flex-wrap: wrap; }
+.TimeChip { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 6px; padding: 10px 14px; border-radius: 16px; background: #fff; border: 1px solid var(--border); box-shadow: var(--shadow); color: inherit; text-decoration: none; }
+.TimeFormat { font-size: 10px; letter-spacing: 0.08em; color: #6b7280; text-transform: uppercase; }
+.TimeText { font-weight: 800; color: var(--red-dark); }
+.SeatBadge { width: 24px; height: 24px; border-radius: 999px; background: var(--red); display: grid; place-items: center; }
+.SeatBadge svg { color: #fff; }
+.TimeChip:hover { border-color: var(--red); }
+.TimeChip.active { border-color: var(--red); background: #ffe4e6; }
+
+.DomeWrap { padding: 12px 0; }
+.Dome { position: relative; height: 80px; border-radius: 0 0 999px 999px; background: radial-gradient(100% 120% at 50% -20%, #e5e7eb 0%, #cbd5e1 60%, #94a3b8 100%); display: grid; place-items: end center; box-shadow: inset 0 -10px 20px rgba(0,0,0,0.15); }
+.DomeText { font-weight: 800; color: #0f172a; padding-bottom: 8px; }
+.SeatGrid { display: grid; gap: 10px; }
+.SeatRow { display: grid; grid-template-columns: 30px repeat(5, 1fr); gap: 8px; align-items: center; }
+.SeatRowLabel { font-weight: 800; color: var(--muted); }
+.Seat { height: 36px; border-radius: 10px; border: 1px solid var(--border); background: #f9fafb; color: #0f172a; font-weight: 700; box-shadow: var(--shadow); }
+.Seat:hover { border-color: var(--red); }
+.Seat.selected { background: var(--red); border-color: var(--red); color: #fff; }
+.Seat.occupied { background: #e5e7eb; color: #6b7280; }
