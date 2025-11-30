@@ -16,7 +16,7 @@ app.use(express.json()) // Middleware para leer el cuerpo de las peticiones en f
 const db = mysql.createPool({
   host: 'localhost',
   user: 'root',
-  password: '', // 🚨 REVISA ESTO (cadena vacía o tu contraseña real)
+  password: '', 
   database: 'db_planetario_sia',
   waitForConnections: true,
   connectionLimit: 10,
