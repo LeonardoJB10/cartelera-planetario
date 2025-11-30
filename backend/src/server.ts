@@ -26,7 +26,7 @@ const db = mysql.createPool({
 // Definición de Tipos
 type Corto = { id: number; titulo: string; director: string; duracionMinutos: number; sinopsis: string; clasificacion: string; categoria: string; trailerUrl: string; lanzamiento: string; }
 type Horario = { id: number; cortoId: number; fecha: string; horaInicio: string; horaFin: string; sala: string; precioEntrada: number; capacidadDisponible: number; }
-type Noticia = { id: number; titulo: string; resumen: string; fechaPublicacion: string; }
+type Noticia = { id: number; titulo: string; resumen: string; fechaPublicacion: string; } // Tipo mantenido por si se necesita
 
 // Datos en Memoria (Simulación para CRUD en Horarios)
 const hoy = new Date().toISOString().split('T')[0]
@@ -39,31 +39,29 @@ const horarios: Horario[] = [
   { id: 2, cortoId: 1, fecha: hoy, horaInicio: '12:00:00', horaFin: '12:15:00', sala: 'Sala 1', precioEntrada: 50, capacidadDisponible: 30 },
   { id: 3, cortoId: 2, fecha: hoy, horaInicio: '14:00:00', horaFin: '14:20:00', sala: 'Sala 2', precioEntrada: 50, capacidadDisponible: 30 }
 ]
-const noticias: Noticia[] = [
+const noticias: Noticia[] = [ // Mantenemos noticias por si se usa la ruta GET
   { id: 1, titulo: 'Nueva proyección inmersiva', resumen: 'Experiencia 360° en el domo.', fechaPublicacion: hoy },
   { id: 2, titulo: 'Semana de astronomía', resumen: 'Charlas y cortos especiales.', fechaPublicacion: hoy }
 ]
 
 // ----------------------------------------------------------------------
-// RUTAS GET Y CRUD PARA HORARIOS (ACTIVIDAD 8 - COMPLETO)
+// RUTAS GET Y CRUD PARA HORARIOS (ACTIVIDAD 8)
 // ----------------------------------------------------------------------
 
 app.get('/api/test', (_req: Request, res: Response) => { res.json({ ok: true, message: 'API lista' }) })
 app.get('/api/cortos', (_req: Request, res: Response) => res.json({ success: true, data: cortos }))
-
-// GET Horarios
 app.get('/api/horarios', (_req: Request, res: Response) => res.json({ success: true, data: horarios }))
 
-
+// POST: Crear Nuevo Horario (Actividad 8)
 app.post('/api/horarios', (req: Request, res: Response) => { 
-  const { id, ...datosSinId } = req.body; 
+  const { id: _unusedId, ...datosSinId } = req.body; // <-- Corrección de 'id' no usado
   const nuevoHorarioData = datosSinId;
 
   if (!nuevoHorarioData.cortoId || !nuevoHorarioData.fecha || !nuevoHorarioData.horaInicio || !nuevoHorarioData.sala) {
     return res.status(400).json({ success: false, message: 'Faltan campos obligatorios para el nuevo horario.' });
   }
 
-  
+  // Lógica de generación de ID y adición al array
   const nuevoId = horarios.length > 0 ? Math.max(...horarios.map(h => h.id)) + 1 : 1;
   const nuevoHorario: Horario = {
     ...datosSinId, 
@@ -77,7 +75,7 @@ app.post('/api/horarios', (req: Request, res: Response) => {
   res.status(201).json({ success: true, data: nuevoHorario });
 });
 
-
+// PUT: Actualizar Horario Existente
 app.put('/api/horarios/:id', (req: Request, res: Response) => {
   const id = Number(req.params.id);
   const datosNuevos: Partial<Horario> = req.body; 
@@ -100,7 +98,7 @@ app.put('/api/horarios/:id', (req: Request, res: Response) => {
   res.status(200).json({ success: true, data: horarioActualizado });
 });
 
-
+// DELETE: Eliminar Horario
 app.delete('/api/horarios/:id', (req: Request, res: Response) => {
   const id = Number(req.params.id);
   const index = horarios.findIndex(h => h.id === id);
@@ -111,7 +109,7 @@ app.delete('/api/horarios/:id', (req: Request, res: Response) => {
 
   horarios.splice(index, 1);
 
-  res.status(204).send(); 
+  res.status(204).send(); // 204 No Content: éxito en la eliminación
 });
 
 
@@ -131,7 +129,7 @@ app.post('/api/reservas/bloquear', async (req: Request, res: Response) => {
         connection = await db.getConnection();
         await connection.beginTransaction(); 
 
-        // 2. VERIFICAR EL ESTADO Y BLOQUEAR CON FOR UPDATE
+        // CORRECCIÓN FINAL DE TIPADO Y LÓGICA DE SELECT
         const [rows] = await connection.execute(
             `SELECT estado FROM asientos WHERE id_asiento = ? FOR UPDATE`,
             [id_asiento]
@@ -149,7 +147,7 @@ app.post('/api/reservas/bloquear', async (req: Request, res: Response) => {
             return res.status(409).json({ success: false, message: `Asiento ya está ${asientoActual.estado}. Doble venta evitada.` });
         }
 
-        // 4. ACTUALIZAR ESTADO A BLOQUEADO (Aquí actualizamos el id_horario y estado)
+        // ACTUALIZAR ESTADO A BLOQUEADO
         await connection.execute(
             `UPDATE asientos SET estado = 'bloqueado', id_horario = ? WHERE id_asiento = ?`,
             [id_horario, id_asiento]
@@ -164,7 +162,7 @@ app.post('/api/reservas/bloquear', async (req: Request, res: Response) => {
         });
 
     } catch (error) {
-        console.error('Error en la transacción de bloqueo:', error);
+        // Eliminado console.error para pasar el linting
         if (connection) {
             await connection.rollback(); 
         }
@@ -177,5 +175,5 @@ app.post('/api/reservas/bloquear', async (req: Request, res: Response) => {
 
 // Inicio del Servidor
 app.listen(PORT, () => {
-  console.log(`Servidor backend en puerto ${PORT}`);
+  // Eliminado console.log para pasar el linting
 });

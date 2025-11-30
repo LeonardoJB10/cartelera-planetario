@@ -40,14 +40,12 @@ app.get('/api/test', (_req, res) => { res.json({ ok: true, message: 'API lista' 
 app.get('/api/cortos', (_req, res) => res.json({ success: true, data: cortos }));
 // GET Horarios
 app.get('/api/horarios', (_req, res) => res.json({ success: true, data: horarios }));
-// POST: Crear Nuevo Horario (Actividad 8)
 app.post('/api/horarios', (req, res) => {
     const { id, ...datosSinId } = req.body;
     const nuevoHorarioData = datosSinId;
     if (!nuevoHorarioData.cortoId || !nuevoHorarioData.fecha || !nuevoHorarioData.horaInicio || !nuevoHorarioData.sala) {
         return res.status(400).json({ success: false, message: 'Faltan campos obligatorios para el nuevo horario.' });
     }
-    // Lógica de generación de ID y adición al array
     const nuevoId = horarios.length > 0 ? Math.max(...horarios.map(h => h.id)) + 1 : 1;
     const nuevoHorario = {
         ...datosSinId,
@@ -59,7 +57,6 @@ app.post('/api/horarios', (req, res) => {
     horarios.push(nuevoHorario);
     res.status(201).json({ success: true, data: nuevoHorario });
 });
-// PUT: Actualizar Horario Existente
 app.put('/api/horarios/:id', (req, res) => {
     const id = Number(req.params.id);
     const datosNuevos = req.body;
@@ -77,7 +74,6 @@ app.put('/api/horarios/:id', (req, res) => {
     horarios[index] = horarioActualizado;
     res.status(200).json({ success: true, data: horarioActualizado });
 });
-// DELETE: Eliminar Horario
 app.delete('/api/horarios/:id', (req, res) => {
     const id = Number(req.params.id);
     const index = horarios.findIndex(h => h.id === id);
@@ -85,7 +81,7 @@ app.delete('/api/horarios/:id', (req, res) => {
         return res.status(404).json({ success: false, message: 'Horario no encontrado para eliminar.' });
     }
     horarios.splice(index, 1);
-    res.status(204).send(); // 204 No Content: éxito en la eliminación
+    res.status(204).send();
 });
 // ----------------------------------------------------------------------
 // LÓGICA DE BLOQUEO DE ASIENTOS - ACTIVIDAD 9 (UNIFICADA Y CORREGIDA)
