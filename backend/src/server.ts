@@ -1,6 +1,6 @@
 import express, { Express, Request, Response } from 'express'
 import cors from 'cors'
-import mysql, { RowDataPacket } from 'mysql2/promise'
+import mysql, { RowDataPacket } from 'mysql2/promise' 
 
 const app: Express = express()
 const PORT = process.env.PORT ? Number(process.env.PORT) : 8000
@@ -39,7 +39,7 @@ const horarios: Horario[] = [
   { id: 2, cortoId: 1, fecha: hoy, horaInicio: '12:00:00', horaFin: '12:15:00', sala: 'Sala 1', precioEntrada: 50, capacidadDisponible: 30 },
   { id: 3, cortoId: 2, fecha: hoy, horaInicio: '14:00:00', horaFin: '14:20:00', sala: 'Sala 2', precioEntrada: 50, capacidadDisponible: 30 }
 ]
-const _noticias: Noticia[] = [ // 🗑️ CORRECCIÓN: Variable renombrada (Unused)
+const _noticias: Noticia[] = [ // ✅ Corrección de Unused Variable: renombrada
   { id: 1, titulo: 'Nueva proyección inmersiva', resumen: 'Experiencia 360° en el domo.', fechaPublicacion: hoy },
   { id: 2, titulo: 'Semana de astronomía', resumen: 'Charlas y cortos especiales.', fechaPublicacion: hoy }
 ]
@@ -54,14 +54,13 @@ app.get('/api/horarios', (_req: Request, res: Response) => res.json({ success: t
 
 // POST: Crear Nuevo Horario (Actividad 8)
 app.post('/api/horarios', (req: Request, res: Response) => { 
-  const { id: ignoredId, ...datosSinId } = req.body; // ✅ CORRECCIÓN: ignoredId (Unused)
+  const { id: ignoredId, ...datosSinId } = req.body; // ✅ Corrección de Unused Variable: ignoredId
   const nuevoHorarioData = datosSinId;
 
   if (!nuevoHorarioData.cortoId || !nuevoHorarioData.fecha || !nuevoHorarioData.horaInicio || !nuevoHorarioData.sala) {
     return res.status(400).json({ success: false, message: 'Faltan campos obligatorios para el nuevo horario.' });
   }
 
-  // Lógica de generación de ID y adición al array
   const nuevoId = horarios.length > 0 ? Math.max(...horarios.map(h => h.id)) + 1 : 1;
   const nuevoHorario: Horario = {
     ...datosSinId, 
@@ -89,7 +88,7 @@ app.put('/api/horarios/:id', (req: Request, res: Response) => {
       ...horarios[index], 
       ...datosNuevos,     
       cortoId: datosNuevos.cortoId !== undefined ? Number(datosNuevos.cortoId) : horarios[index].cortoId,
-      precioEntrada: datosNuesvos.precioEntrada !== undefined ? Number(datosNuevos.precioEntrada) : horarios[index].precioEntrada,
+      precioEntrada: datosNuevos.precioEntrada !== undefined ? Number(datosNuevos.precioEntrada) : horarios[index].precioEntrada,
       capacidadDisponible: datosNuevos.capacidadDisponible !== undefined ? Number(datosNuevos.capacidadDisponible) : horarios[index].capacidadDisponible,
   };
   
@@ -130,6 +129,7 @@ app.post('/api/reservas/bloquear', async (req: Request, res: Response) => {
         await connection.beginTransaction(); 
 
         // 2. VERIFICAR EL ESTADO Y BLOQUEAR CON FOR UPDATE
+        // Usamos el 'any' en el cast, que ahora debe pasar el linting con las correcciones.
         const [rows] = await connection.execute(
             `SELECT estado FROM asientos WHERE id_asiento = ? FOR UPDATE`,
             [id_asiento]
@@ -175,4 +175,3 @@ app.post('/api/reservas/bloquear', async (req: Request, res: Response) => {
 // Inicio del Servidor
 app.listen(PORT, () => {
   // Eliminado console.log/error para pasar el linting
-});
