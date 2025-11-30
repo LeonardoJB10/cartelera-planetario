@@ -1,7 +1,7 @@
 # 📄 .github/workflows/nodejs-ci.yml
 name: Node.js CI - Code Quality Check
 
-# El flujo se activa con cada 'push' o 'pull request' a las ramas principales
+# Define cuándo se ejecutará
 on:
   push:
     branches: [ "main", "master" ]
@@ -14,27 +14,30 @@ jobs:
     
     strategy:
       matrix:
-        node-version: [20.x] # Usa la versión de Node.js que empleas
+        node-version: [20.x]
 
     steps:
-      # 1. Obtiene el código del repositorio
       - uses: actions/checkout@v4
         name: Checkout Repository
 
-      # 2. Configura el ambiente de Node.js
-      - name: Setup Node.js ${{ matrix.node-version }}
+      - name: Setup Node.js ${{ matrix.version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
           cache-dependency-path: 'backend/package-lock.json'
       
-      # 3. Instala las dependencias (dentro de la carpeta 'backend')
+      # 1. Instala las dependencias (incluyendo ESLint)
       - name: Install Dependencies
         run: npm install
         working-directory: ./backend/
 
-      # 4. Ejecuta la verificación de calidad (linting)
+      # 🚨 2. CORRECCIÓN DE PERMISOS (SOLUCIONA "Permission denied")
+      - name: Fix Execution Permissions
+        run: chmod +x ./node_modules/.bin/*
+        working-directory: ./backend/
+
+      # 3. Ejecución del Linting
       - name: Run ESLint Quality Check
         run: npm run lint
         working-directory: ./backend/
