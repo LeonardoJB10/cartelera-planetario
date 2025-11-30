@@ -174,5 +174,5 @@ app.post('/api/reservas/bloquear', async (req: Request, res: Response) => {
 
 // Inicio del Servidor
 app.listen(PORT, () => {
-  // Eliminado console.log/error para pasar el linting
+    console.log(`Servidor corriendo en http://localhost:${PORT}`)
 });
