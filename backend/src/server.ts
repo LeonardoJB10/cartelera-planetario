@@ -1,13 +1,13 @@
 import express, { Express, Request, Response } from 'express'
 import cors from 'cors'
-import mysql, { RowDataPacket } from 'mysql2/promise'
+import mysql, { RowDataPacket } from 'mysql2/promise' // Importación para MySQL
 
 const app: Express = express()
 const PORT = process.env.PORT ? Number(process.env.PORT) : 8000
 
 // Middlewares
 app.use(cors({ origin: 'http://localhost:5173', credentials: true }))
-app.use(express.json()) 
+app.use(express.json()) // Middleware para leer el cuerpo de las peticiones en formato JSON
 
 // ----------------------------------------------------------------------
 // CONFIGURACIÓN DE BASE DE DATOS
@@ -16,7 +16,7 @@ app.use(express.json())
 const db = mysql.createPool({
     host: 'localhost',
     user: 'root', 
-    password: '', // Contraseña MySQL
+    password: '', // 🚨 REVISA ESTO (cadena vacía o tu contraseña real)
     database: 'db_planetario_sia',
     waitForConnections: true,
     connectionLimit: 10,
@@ -28,7 +28,7 @@ type Corto = { id: number; titulo: string; director: string; duracionMinutos: nu
 type Horario = { id: number; cortoId: number; fecha: string; horaInicio: string; horaFin: string; sala: string; precioEntrada: number; capacidadDisponible: number; }
 type Noticia = { id: number; titulo: string; resumen: string; fechaPublicacion: string; }
 
-// Datos en Memoria (Simulación)
+// Datos en Memoria (Simulación para CRUD en Horarios)
 const hoy = new Date().toISOString().split('T')[0]
 const cortos: Corto[] = [
   { id: 1, titulo: 'Corto Astronomía', director: 'Equipo Planetario', duracionMinutos: 15, sinopsis: 'Introducción a las constelaciones', clasificacion: 'A', categoria: 'Divulgación', trailerUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ', lanzamiento: hoy },
@@ -39,7 +39,7 @@ const horarios: Horario[] = [
   { id: 2, cortoId: 1, fecha: hoy, horaInicio: '12:00:00', horaFin: '12:15:00', sala: 'Sala 1', precioEntrada: 50, capacidadDisponible: 30 },
   { id: 3, cortoId: 2, fecha: hoy, horaInicio: '14:00:00', horaFin: '14:20:00', sala: 'Sala 2', precioEntrada: 50, capacidadDisponible: 30 }
 ]
-const _noticias: Noticia[] = [ // <-- CORRECCIÓN #1: Renombrada a _noticias (no usada)
+const _noticias: Noticia[] = [ // 🗑️ CORRECCIÓN #1: Renombrada a _noticias (no utilizada)
   { id: 1, titulo: 'Nueva proyección inmersiva', resumen: 'Experiencia 360° en el domo.', fechaPublicacion: hoy },
   { id: 2, titulo: 'Semana de astronomía', resumen: 'Charlas y cortos especiales.', fechaPublicacion: hoy }
 ]
@@ -54,13 +54,14 @@ app.get('/api/horarios', (_req: Request, res: Response) => res.json({ success: t
 
 // POST: Crear Nuevo Horario (Actividad 8)
 app.post('/api/horarios', (req: Request, res: Response) => { 
-  const { id: _, ...datosSinId } = req.body; // <-- CORRECCIÓN #2: Usamos '_' para ignorar la variable 'id'
+  const { id: ignoredId, ...datosSinId } = req.body; // <-- CORRECCIÓN #2: Usamos ignoredId para ignorar la variable 'id'
   const nuevoHorarioData = datosSinId;
 
   if (!nuevoHorarioData.cortoId || !nuevoHorarioData.fecha || !nuevoHorarioData.horaInicio || !nuevoHorarioData.sala) {
     return res.status(400).json({ success: false, message: 'Faltan campos obligatorios para el nuevo horario.' });
   }
 
+  // Lógica de generación de ID y adición al array
   const nuevoId = horarios.length > 0 ? Math.max(...horarios.map(h => h.id)) + 1 : 1;
   const nuevoHorario: Horario = {
     ...datosSinId, 
@@ -113,7 +114,7 @@ app.delete('/api/horarios/:id', (req: Request, res: Response) => {
 
 
 // ----------------------------------------------------------------------
-// LÓGICA DE BLOQUEO DE ASIENTOS - ACTIVIDAD 9 (CORREGIDA)
+// LÓGICA DE BLOQUEO DE ASIENTOS - ACTIVIDAD 9
 // ----------------------------------------------------------------------
 
 app.post('/api/reservas/bloquear', async (req: Request, res: Response) => {
@@ -132,7 +133,7 @@ app.post('/api/reservas/bloquear', async (req: Request, res: Response) => {
         const [rows] = await connection.execute(
             `SELECT estado FROM asientos WHERE id_asiento = ? FOR UPDATE`,
             [id_asiento]
-        ) as [RowDataPacket[], any]; // <--- El 'any' es tolerado aquí si es necesario
+        ) as [RowDataPacket[], any]; // Asumimos que esta tipificación es correcta para el entorno
 
         if (rows.length === 0) {
             await connection.rollback();
@@ -160,7 +161,7 @@ app.post('/api/reservas/bloquear', async (req: Request, res: Response) => {
             data: { id_asiento, id_horario, estado: 'bloqueado' } 
         });
 
-    } catch (_error) { // <-- CORRECCIÓN #3: Usamos '_error' para ignorar la variable no usada
+    } catch (_error) { // <-- CORRECCIÓN #3 & #4: Usamos '_error' para ignorar la variable no usada
         if (connection) {
             await connection.rollback(); 
         }
@@ -173,5 +174,5 @@ app.post('/api/reservas/bloquear', async (req: Request, res: Response) => {
 
 // Inicio del Servidor
 app.listen(PORT, () => {
-  // Eliminado console.log/error para pasar el linting (ya no hay warnings)
+  // Eliminado console.log para pasar el linting
 });
