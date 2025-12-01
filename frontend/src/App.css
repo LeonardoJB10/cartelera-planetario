@@ -369,10 +369,32 @@ body {
 .InputLabel { font-size: 13px; color: var(--muted); font-weight: 700; }
 .TextInput { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: #f9fafb; font-size: 14px; color: var(--text); }
 .FormError { color: #b91c1c; font-weight: 600; }
+.FormSuccess { color: #065f46; font-weight: 700; background: #dcfce7; border: 1px solid #86efac; padding: 8px 12px; border-radius: 10px; }
 .FormActions { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }
 .SubmitBtn { background: var(--red); color: #fff; border: 1px solid var(--red); padding: 10px 16px; border-radius: 10px; font-weight: 700; }
 .SubmitBtn:hover { filter: brightness(1.05); }
 .AltLink { color: #2563eb; }
+
+/* Admin */
+.AdminLayout { max-width: 1200px; margin: 0 auto; padding: 20px; display: grid; grid-template-columns: 260px 1fr; gap: 24px; }
+.AdminSidebar { background: #f8fafc; border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); padding: 14px; display: grid; gap: 8px; align-content: start; }
+.AdminNav { display: grid; gap: 6px; }
+.AdminNavBtn { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: #fff; font-weight: 700; color: var(--text); }
+.AdminNavBtn.active { border-color: var(--red); background: #fee2e2; color: #991b1b; }
+.AdminContent { display: grid; gap: 18px; }
+.AdminHeader { display: flex; align-items: center; justify-content: space-between; }
+.AdminTitle { margin: 0; font-size: 32px; font-weight: 900; }
+.AdminSubtitle { font-size: 20px; font-weight: 800; margin: 0; }
+.AdminActions { display: flex; gap: 10px; }
+.Primary { background: #111827; color: #fff; border: 1px solid #111827; padding: 10px 16px; border-radius: 12px; font-weight: 800; }
+.Primary:hover { filter: brightness(1.05); }
+.Table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--border); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); }
+.Table thead { background: #f3f4f6; }
+.Table th, .Table td { padding: 12px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+.Table th { font-weight: 800; color: var(--muted); }
+.Table tr:last-child td { border-bottom: none; }
+.FormRow { display: grid; gap: 6px; margin-top: 8px; }
+.FormActions { display: flex; gap: 10px; margin-top: 10px; }
 
 /* Login landing */
 .LoginLanding { width: 100%; max-width: 640px; text-align: center; display: grid; gap: 16px; align-content: start; }
@@ -467,5 +489,6 @@ body {
 .SeatRowLabel { font-weight: 800; color: var(--muted); }
 .Seat { height: 36px; border-radius: 10px; border: 1px solid var(--border); background: #f9fafb; color: #0f172a; font-weight: 700; box-shadow: var(--shadow); }
 .Seat:hover { border-color: var(--red); }
-.Seat.selected { background: var(--red); border-color: var(--red); color: #fff; }
-.Seat.occupied { background: #e5e7eb; color: #6b7280; }
+.Seat.available { background: #10b981; border-color: #10b981; color: #fff; }
+.Seat.selected { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+.Seat.occupied { background: #ef4444; border-color: #ef4444; color: #fff; }

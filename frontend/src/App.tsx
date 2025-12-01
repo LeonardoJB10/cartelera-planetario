@@ -1,13 +1,33 @@
 import './App.css'
 import { useState, useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, Link, useParams, useNavigate, useLocation } from 'react-router-dom'
+import axios from 'axios'
+import { BrowserRouter as Router, Routes, Route, Link, useParams, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import jsPDF from 'jspdf'
 import { MdEventSeat, MdPerson, MdShoppingCart, MdAdd, MdRemove, MdClose } from 'react-icons/md'
 import { FaFacebook } from 'react-icons/fa'
+const API = 'http://localhost:8000'
+const api = axios.create({ baseURL: 'http://localhost:8000/api' })
 
 function Header() {
   const loc = useLocation()
+  const navigate = useNavigate()
   const isAuth = loc.pathname === '/login' || loc.pathname === '/register'
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') || '' : ''
+  let user: { name: string } | null = null
+  let isAdmin = false
+  if (token) {
+    try {
+      const base = token.split('.')[1] || ''
+      const json = JSON.parse(atob(base.replace(/-/g, '+').replace(/_/g, '/')))
+      if (json && json.name) user = { name: String(json.name) }
+      if (json && typeof json.admin !== 'undefined') isAdmin = !!json.admin
+    } catch { user = null }
+  }
+  const doLogout = () => {
+    if (typeof window !== 'undefined') localStorage.removeItem('auth_token')
+    navigate('/login')
+  }
+  void navigate
   return (
     <header className={`HeaderBar ${isAuth ? 'red' : ''}`}>
       <div className="HeaderInner">
@@ -27,8 +47,18 @@ function Header() {
         </div>
         <nav className="Nav">
           <Link className="ActionLink" to="/">Noticias</Link>
-          <Link className="ActionLink" to="/login">Iniciar sesión</Link>
-          <Link className="ActionLink" to="/register">Registro</Link>
+          {isAdmin && <Link className="ActionLink" to="/admin">Admin</Link>}
+          {user ? (
+            <>
+              <Link className="ActionLink" to="/perfil" aria-label="Perfil"><MdPerson size={18} /></Link>
+              <button className="ActionLink" onClick={doLogout}>Cerrar sesión</button>
+            </>
+          ) : (
+            <>
+              <Link className="ActionLink" to="/login">Iniciar sesión</Link>
+              <Link className="ActionLink" to="/register">Registro</Link>
+            </>
+          )}
         </nav>
       </div>
     </header>
@@ -65,7 +95,7 @@ function Hero() {
         <div>
           <h1 className="HeroTitle Large">{s.title}</h1>
           <p className="HeroText">{s.desc}</p>
-          <Link className="PrimaryBtn" to="/comprar/0">Adquiere tickets</Link>
+          <Link className="PrimaryBtn" to="/comprar/1">Adquiere tickets</Link>
         </div>
         <div className="PosterWrap">
           <div className="PosterCard">
@@ -105,8 +135,274 @@ function Actions() {
   )
 }
 
+export interface HorarioDashboard { id: number; fecha: string; id_sala: number }
+type MovieItem = { id: number; title: string; status: string; statusColor: string; rating: string; ratingColor: string; mins: number; poster: string; genres: string; synopsis: string }
+
+export function Dashboard() {
+  const [horarios, setHorarios] = useState<HorarioDashboard[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [showCreate, setShowCreate] = useState(false)
+  const [form, setForm] = useState<{ titulo: string; fecha: string; horaInicio: string; id_sala: string; descripcion?: string; duracion_minutos?: string }>({ titulo: '', fecha: '', horaInicio: '', id_sala: '' })
+  const [editId, setEditId] = useState<number | null>(null)
+  const [editForm, setEditForm] = useState<{ titulo?: string; fecha?: string; horaInicio?: string; id_sala?: string; descripcion?: string; duracion_minutos?: string }>({})
+  const [adminForm, setAdminForm] = useState<{ name: string; email: string; password: string }>({ name: '', email: '', password: '' })
+  const [activeTab, setActiveTab] = useState('horarios' as 'horarios' | 'admins')
+  const [admins, setAdmins] = useState<{ id: number; name: string; email: string }[]>([])
+
+  const fetchHorarios = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await api.get('/horarios')
+      setHorarios((res.data?.data ?? []) as HorarioDashboard[])
+    } catch {
+      setError('No se pudo cargar los horarios')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchAdmins = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') || '' : ''
+      const res = await api.get('/admin/users', { headers: { Authorization: `Bearer ${token}` } })
+      setAdmins((res.data?.data ?? []) as { id: number; name: string; email: string }[])
+    } catch {
+      setError('No se pudo cargar administradores')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { fetchHorarios() }, [])
+  useEffect(() => { if (activeTab === 'admins') fetchAdmins() }, [activeTab])
+
+  const handleDelete = async (id: number) => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') || '' : ''
+      await api.delete(`/horarios/${id}`, { headers: { Authorization: `Bearer ${token}` } })
+      setHorarios(prev => prev.filter(h => h.id !== id))
+    } catch {
+      setError('No se pudo eliminar el horario')
+    }
+  }
+
+  const handleCreate = async () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') || '' : ''
+    try {
+      await api.post('/horarios', { titulo: form.titulo, fecha: form.fecha, horaInicio: form.horaInicio, id_sala: Number(form.id_sala), descripcion: form.descripcion || undefined, duracion_minutos: form.duracion_minutos ? Number(form.duracion_minutos) : undefined }, { headers: { Authorization: `Bearer ${token}` } })
+      setShowCreate(false)
+      setForm({ titulo: '', fecha: '', horaInicio: '', id_sala: '' })
+      fetchHorarios()
+    } catch {
+      setError('No se pudo crear el horario')
+    }
+  }
+
+  const handleEdit = async () => {
+    if (editId === null) return
+    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') || '' : ''
+    try {
+      await api.put(`/horarios/${editId}`, { ...editForm, id_sala: editForm.id_sala ? Number(editForm.id_sala) : undefined }, { headers: { Authorization: `Bearer ${token}` } })
+      setEditId(null)
+      setEditForm({})
+      fetchHorarios()
+    } catch {
+      setError('No se pudo editar el horario')
+    }
+  }
+
+  const handleCreateAdmin = async () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') || '' : ''
+    try {
+      await api.post('/admin/users', adminForm, { headers: { Authorization: `Bearer ${token}` } })
+      setAdminForm({ name: '', email: '', password: '' })
+      fetchAdmins()
+      alert('Administrador creado')
+    } catch {
+      setError('No se pudo crear el administrador')
+    }
+  }
+
+  return (
+    <div className="AdminLayout">
+      <aside className="AdminSidebar">
+        <div className="AdminSubtitle">Panel</div>
+        <div className="AdminNav">
+          <button className={`AdminNavBtn ${activeTab==='horarios'?'active':''}`} onClick={() => setActiveTab('horarios')}>Horarios</button>
+          <button className={`AdminNavBtn ${activeTab==='admins'?'active':''}`} onClick={() => setActiveTab('admins')}>Administradores</button>
+        </div>
+      </aside>
+      <div className="AdminContent">
+        <div className="AdminHeader">
+          <h1 className="AdminTitle">Panel de Administración</h1>
+          <div className="AdminActions">
+            {activeTab==='horarios' && <button className="Primary" onClick={() => setShowCreate(true)}>Crear Nueva Función</button>}
+          </div>
+        </div>
+
+        {loading && <p>Cargando...</p>}
+        {error && <p className="Error">{error}</p>}
+
+        {activeTab==='horarios' && showCreate && (
+        <div className="Card">
+          <div className="FormRow">
+            <input className="TextInput" placeholder="Título" value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} />
+          </div>
+          <div className="FormRow">
+            <input className="TextInput" placeholder="Fecha (YYYY-MM-DD)" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} />
+          </div>
+          <div className="FormRow">
+            <input className="TextInput" placeholder="Hora (HH:MM:SS)" value={form.horaInicio} onChange={(e) => setForm({ ...form, horaInicio: e.target.value })} />
+          </div>
+          <div className="FormRow">
+            <input className="TextInput" placeholder="Sala" value={form.id_sala} onChange={(e) => setForm({ ...form, id_sala: e.target.value })} />
+          </div>
+          <div className="FormRow">
+            <input className="TextInput" placeholder="Descripción (opcional)" value={form.descripcion || ''} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} />
+          </div>
+          <div className="FormRow">
+            <input className="TextInput" placeholder="Duración (min, opcional)" value={form.duracion_minutos || ''} onChange={(e) => setForm({ ...form, duracion_minutos: e.target.value })} />
+          </div>
+          <div className="FormActions">
+            <button className="SubmitBtn" onClick={handleCreate}>Guardar</button>
+            <button className="SecondaryBtn" onClick={() => setShowCreate(false)}>Cancelar</button>
+          </div>
+        </div>
+      )}
+      {activeTab==='horarios' && (
+      <table className="Table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Fecha</th>
+            <th>Sala</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {horarios.map(h => (
+            <tr key={h.id}>
+              <td>{h.id}</td>
+              <td>{h.fecha}</td>
+              <td>{h.id_sala}</td>
+              <td>
+                <button onClick={() => { setEditId(h.id); setEditForm({}) }}>Editar (PUT)</button>
+                <button onClick={() => handleDelete(h.id)}>Eliminar (DELETE)</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      )}
+
+      {activeTab==='horarios' && editId !== null && (
+        <div className="Card">
+          <div className="FormRow">
+            <input className="TextInput" placeholder="Título" value={editForm.titulo || ''} onChange={(e) => setEditForm({ ...editForm, titulo: e.target.value })} />
+          </div>
+          <div className="FormRow">
+            <input className="TextInput" placeholder="Fecha (YYYY-MM-DD)" value={editForm.fecha || ''} onChange={(e) => setEditForm({ ...editForm, fecha: e.target.value })} />
+          </div>
+          <div className="FormRow">
+            <input className="TextInput" placeholder="Hora (HH:MM:SS)" value={editForm.horaInicio || ''} onChange={(e) => setEditForm({ ...editForm, horaInicio: e.target.value })} />
+          </div>
+          <div className="FormRow">
+            <input className="TextInput" placeholder="Sala" value={editForm.id_sala || ''} onChange={(e) => setEditForm({ ...editForm, id_sala: e.target.value })} />
+          </div>
+          <div className="FormRow">
+            <input className="TextInput" placeholder="Descripción (opcional)" value={editForm.descripcion || ''} onChange={(e) => setEditForm({ ...editForm, descripcion: e.target.value })} />
+          </div>
+          <div className="FormRow">
+            <input className="TextInput" placeholder="Duración (min, opcional)" value={editForm.duracion_minutos || ''} onChange={(e) => setEditForm({ ...editForm, duracion_minutos: e.target.value })} />
+          </div>
+          <div className="FormActions">
+            <button className="SubmitBtn" onClick={handleEdit}>Guardar cambios</button>
+            <button className="SecondaryBtn" onClick={() => { setEditId(null); setEditForm({}) }}>Cancelar</button>
+          </div>
+        </div>
+      )}
+
+      {activeTab==='admins' && (
+      <div>
+        <div className="Card">
+          <div className="FormRow">
+            <input className="TextInput" placeholder="Nombre" value={adminForm.name} onChange={(e) => setAdminForm({ ...adminForm, name: e.target.value })} />
+          </div>
+          <div className="FormRow">
+            <input className="TextInput" placeholder="Correo" type="email" value={adminForm.email} onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })} />
+          </div>
+          <div className="FormRow">
+            <input className="TextInput" placeholder="Contraseña" type="password" value={adminForm.password} onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })} />
+          </div>
+          <div className="FormActions">
+            <button className="SubmitBtn" onClick={handleCreateAdmin}>Crear administrador</button>
+          </div>
+        </div>
+        <table className="Table" style={{ marginTop: 12 }}>
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Correo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {admins.map(a => (
+              <tr key={a.id}>
+                <td>{a.name}</td>
+                <td>{a.email}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      )}
+      </div>
+    </div>
+  )
+}
+
 function Catalog() {
-  const [tab, setTab] = useState<'cartelera' | 'horarios'>('cartelera')
+  const [tab, setTab] = useState('cartelera' as 'cartelera' | 'horarios')
+  const [items, setItems] = useState(ITEMS.map((it, i) => ({ id: i + 1, ...it })) as MovieItem[])
+  const [horarios, setHorarios] = useState([] as { id: number; cortoId: number; fecha: string; horaInicio: string; horaFin: string; sala: string; precioEntrada: number; capacidadDisponible: number }[])
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const res = await fetch(`${API}/api/cortos`)
+        const json: { success: boolean; data: { id: number; titulo: string; clasificacion?: string; duracionMinutos?: number; categoria?: string; sinopsis?: string }[] } = await res.json()
+        if (json && json.success && Array.isArray(json.data)) {
+          const posters = [
+            'https://upload.wikimedia.org/wikipedia/commons/c/c3/Solar_sys8.jpg',
+            'https://upload.wikimedia.org/wikipedia/commons/6/60/Polarlicht_2.jpg',
+            'https://upload.wikimedia.org/wikipedia/commons/4/47/Carina_Nebula.jpg',
+            'https://upload.wikimedia.org/wikipedia/commons/5/5f/HubbleUltraDeepField.jpg',
+          ]
+          const mapped: MovieItem[] = json.data.map((c, i) => ({
+            id: c.id,
+            title: c.titulo,
+            status: 'En Cartelera',
+            statusColor: 'green',
+            rating: c.clasificacion || 'A',
+            ratingColor: (c.clasificacion === 'B' ? 'yellow' : 'green'),
+            mins: c.duracionMinutos || 10,
+            poster: posters[i % posters.length],
+            genres: c.categoria || 'Divulgación',
+            synopsis: c.sinopsis || '',
+          }))
+          setItems(mapped)
+        }
+      } catch { void 0 }
+      try {
+        const res2 = await fetch(`${API}/api/horarios`)
+        const json2: { success: boolean; data: { id: number; cortoId: number; fecha: string; horaInicio: string; horaFin: string; sala: string; precioEntrada: number; capacidadDisponible: number }[] } = await res2.json()
+        if (json2 && json2.success && Array.isArray(json2.data)) setHorarios(json2.data)
+      } catch { void 0 }
+    })()
+  }, [])
   return (
     <div className="Page">
       <div className="Tabs">
@@ -115,8 +411,8 @@ function Catalog() {
       </div>
       {tab === 'cartelera' ? (
         <div className="Grid MoviesGrid">
-          {ITEMS.map((m, i) => (
-            <div key={i} className="Card Movie">
+          {items.map((m) => (
+            <div key={m.id} className="Card Movie">
               <div className="MovieMedia">
                 <img className="MoviePoster" src={m.poster} alt={m.title} loading="lazy" />
               </div>
@@ -127,15 +423,15 @@ function Catalog() {
                   <span className={`Chip status ${m.statusColor}`}>{m.status}</span>
                 </div>
                 <h3 className="MovieTitle">{m.title}</h3>
-                <Link className="FootLink" to={`/detalle/${i}`}>Ver detalle</Link>
+                <Link className="FootLink" to={`/detalle/${m.id}`}>Ver detalle</Link>
               </div>
             </div>
           ))}
         </div>
       ) : (
         <div className="ScheduleList">
-          {ITEMS.map((m, i) => (
-            <div key={i} className="ScheduleItem">
+          {items.map((m) => (
+            <div key={m.id} className="ScheduleItem">
               <div className="SchedulePoster">
                 <img className="MoviePoster" src={m.poster} alt={m.title} loading="lazy" />
               </div>
@@ -146,21 +442,22 @@ function Catalog() {
                  <span className={`Chip status ${m.statusColor}`}>{m.status}</span>
                 </div>
                 <h3 className="ScheduleTitle">{m.title}</h3>
-                <Link className="FootLink" to={`/detalle/${i}`}>Ver detalle</Link>
+                <Link className="FootLink" to={`/detalle/${m.id}`}>Ver detalle</Link>
                 <div className="TimesLang">Español</div>
                 <div className="TimesRow">
-                  {[
-                    { time: '7:20 p.m.', format: 'REAL D 3D' },
-                    { time: '8:20 p.m.' },
-                    { time: '9:00 p.m.' },
-                    { time: '9:40 p.m.', format: 'REAL D 3D' },
-                  ].map((st, idx2) => (
-                    <Link key={idx2} className="TimeChip" to={`/comprar/${i}?t=${encodeURIComponent(st.time)}`}>
-                      {st.format && <span className="TimeFormat">{st.format}</span>}
-                      <span className="TimeText">{st.time}</span>
-                      <span className="SeatBadge"><MdEventSeat size={16} /></span>
-                    </Link>
-                  ))}
+                  {horarios.filter(h => h.cortoId === m.id).map((h, idx2) => {
+                    const [hh, mm] = h.horaInicio.split(':')
+                    const hour = Number(hh)
+                    const ampm = hour >= 12 ? 'p.m.' : 'a.m.'
+                    const displayHour = hour % 12 === 0 ? 12 : hour % 12
+                    const timeText = `${displayHour}:${mm} ${ampm}`
+                    return (
+                      <Link key={idx2} className="TimeChip" to={`/comprar/${m.id}?t=${encodeURIComponent(timeText)}`}>
+                        <span className="TimeText">{timeText}</span>
+                        <span className="SeatBadge"><MdEventSeat size={16} /></span>
+                      </Link>
+                    )
+                  })}
                 </div>
                 <a className="FootLink" href="#">Horarios en otros cines →</a>
               </div>
@@ -174,8 +471,26 @@ function Catalog() {
 
 function Detail() {
   const { id } = useParams()
-  const idx = Number(id)
-  const m = Number.isFinite(idx) && ITEMS[idx] ? ITEMS[idx] : ITEMS[0]
+  const numId = Number(id)
+  const [m, setM] = useState<{ id: number; title: string; status: string; statusColor: string; rating: string; ratingColor: string; mins: number; poster: string; genres: string; synopsis: string }>(() => ({ id: 1, ...ITEMS[0] }))
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const res = await fetch(`${API}/api/cortos/${numId}`)
+        const json: { success: boolean; data?: { id: number; titulo: string; clasificacion?: string; duracionMinutos?: number; categoria?: string; sinopsis?: string } } = await res.json()
+        if (json && json.success && json.data) {
+          const posters = [
+            'https://upload.wikimedia.org/wikipedia/commons/c/c3/Solar_sys8.jpg',
+            'https://upload.wikimedia.org/wikipedia/commons/6/60/Polarlicht_2.jpg',
+            'https://upload.wikimedia.org/wikipedia/commons/4/47/Carina_Nebula.jpg',
+            'https://upload.wikimedia.org/wikipedia/commons/5/5f/HubbleUltraDeepField.jpg',
+          ]
+          const poster = posters[(json.data.id - 1) % posters.length]
+          setM({ id: json.data.id, title: json.data.titulo, status: 'En Cartelera', statusColor: 'green', rating: json.data.clasificacion || 'A', ratingColor: (json.data.clasificacion === 'B' ? 'yellow' : 'green'), mins: json.data.duracionMinutos || 10, poster, genres: json.data.categoria || 'Divulgación', synopsis: json.data.sinopsis || '' })
+        }
+      } catch { void 0 }
+    })()
+  }, [numId])
   const navigate = useNavigate()
   return (
     <div>
@@ -197,7 +512,7 @@ function Detail() {
               <span className="Chip time">{m.mins} min</span>
             </div>
             <div className="CTAGroup">
-              <Link className="PrimaryBtn" to={`/comprar/${Number.isFinite(idx) ? idx : 0}`}>Comprar boletos</Link>
+              <Link className="PrimaryBtn" to={(localStorage.getItem('auth_token') ? `/comprar/${Number.isFinite(numId) ? numId : 1}` : '/login')}>Comprar boletos</Link>
               <button className="OutlineBtn">Ver tráiler</button>
             </div>
           </div>
@@ -232,15 +547,29 @@ function Buy() {
   const qs = new URLSearchParams(loc.search)
   const selectedTime = qs.get('t') || ''
   const navigate = useNavigate()
-  const idx = Number(id)
-  const m = Number.isFinite(idx) && ITEMS[idx] ? ITEMS[idx] : ITEMS[0]
-  const showTimes = [
-    { time: '7:20 p.m.', format: 'REAL D 3D' },
-    { time: '8:20 p.m.' },
-    { time: '9:00 p.m.' },
-    { time: '9:40 p.m.', format: 'REAL D 3D' },
-  ]
-  const [selTime, setSelTime] = useState<string>(selectedTime || showTimes[0].time)
+  const numId = Number(id)
+  const [m, setM] = useState<{ id: number; title: string; status: string; statusColor: string; rating: string; ratingColor: string; mins: number; poster: string; genres: string; synopsis: string }>(() => ({ id: 1, ...ITEMS[0] }))
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const res = await fetch(`${API}/api/cortos/${numId}`)
+        const json: { success: boolean; data?: { id: number; titulo: string; clasificacion?: string; duracionMinutos?: number; categoria?: string; sinopsis?: string } } = await res.json()
+        if (json && json.success && json.data) {
+          const posters = [
+            'https://upload.wikimedia.org/wikipedia/commons/c/c3/Solar_sys8.jpg',
+            'https://upload.wikimedia.org/wikipedia/commons/6/60/Polarlicht_2.jpg',
+            'https://upload.wikimedia.org/wikipedia/commons/4/47/Carina_Nebula.jpg',
+            'https://upload.wikimedia.org/wikipedia/commons/5/5f/HubbleUltraDeepField.jpg',
+          ]
+          const poster = posters[(json.data.id - 1) % posters.length]
+          setM({ id: json.data.id, title: json.data.titulo, status: 'En Cartelera', statusColor: 'green', rating: json.data.clasificacion || 'A', ratingColor: (json.data.clasificacion === 'B' ? 'yellow' : 'green'), mins: json.data.duracionMinutos || 10, poster, genres: json.data.categoria || 'Divulgación', synopsis: json.data.sinopsis || '' })
+        }
+      } catch { void 0 }
+    })()
+  }, [numId])
+  const [showTimes, setShowTimes] = useState<{ time: string; id?: number; format?: string }[]>([])
+  const [selTime, setSelTime] = useState<string>(selectedTime || '')
+  const [selHorarioId, setSelHorarioId] = useState<number | null>(null)
   const rows = ['A','B','C','D','E']
   const cols = [1,2,3,4,5]
   const [seats, setSeats] = useState<{ id: string; status: 'available' | 'selected' | 'occupied' }[]>(() => {
@@ -248,16 +577,61 @@ function Buy() {
     rows.forEach(r => cols.forEach(c => all.push({ id: `${r}${c}`, status: 'available' })))
     return all
   })
+  async function fetchSeats(hid: number) {
+    try {
+      const res = await fetch(`${API}/api/asientos?horario=${hid}`)
+      const json: { success: boolean; data: { id_asiento: string; estado: string }[] } = await res.json()
+      if (json && json.success && Array.isArray(json.data)) {
+        setSeats(prev => prev.map(s => {
+          const row = json.data.find(r => r.id_asiento === s.id)
+          if (!row) return { ...s, status: s.status === 'selected' ? 'selected' : 'available' }
+          const occupied = row.estado !== 'libre'
+          if (occupied) return { ...s, status: 'occupied' }
+          return { ...s, status: s.status === 'selected' ? 'selected' : 'available' }
+        }))
+      }
+    } catch { /* ignore */ }
+  }
+  
+  
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const res = await fetch(`${API}/api/horarios`)
+        const json: { success: boolean; data: { id: number; cortoId: number; fecha: string; horaInicio: string }[] } = await res.json()
+        if (json && json.success && Array.isArray(json.data)) {
+          const list = json.data.filter((h) => h.cortoId === (Number.isFinite(numId) ? numId : 1)).map((h) => {
+            const [hh, mm] = String(h.horaInicio).split(':')
+            const hour = Number(hh)
+            const ampm = hour >= 12 ? 'p.m.' : 'a.m.'
+            const displayHour = hour % 12 === 0 ? 12 : hour % 12
+            const timeText = `${displayHour}:${mm} ${ampm}`
+            return { time: timeText, id: h.id }
+          })
+          setShowTimes(list)
+          let chosen = selTime
+          if (!chosen && list[0]) chosen = list[0].time
+          setSelTime(chosen)
+          const match = list.find(x => x.time === chosen)
+          const hid = (match && match.id) || (list[0] && list[0].id) || null
+          setSelHorarioId(hid)
+          if (hid) await fetchSeats(hid)
+        }
+      } catch { void 0 }
+    })()
+  }, [numId, selTime])
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (selHorarioId) fetchSeats(selHorarioId)
+    }, 10000)
+    return () => clearInterval(id)
+  }, [selHorarioId])
   const toggleSeat = (id: string) => {
-    setSeats(prev => {
-      const selectedCount = prev.filter(s => s.status === 'selected').length
-      return prev.map(seat => {
-        if (seat.id !== id) return seat
-        if (seat.status === 'selected') return { ...seat, status: 'available' }
-        if (seat.status === 'available' && selectedCount < 4) return { ...seat, status: 'selected' }
-        return seat
-      })
-    })
+    const seat = seats.find(s => s.id === id)
+    if (!seat) return
+    if (seat.status === 'occupied') return
+    const selectedCount = seats.filter(s => s.status === 'selected').length
+    setSeats(prev => prev.map(s => s.id === id ? { ...s, status: s.status === 'selected' ? 'available' : (selectedCount >= 4 ? s.status : 'selected') } : s))
   }
   const selectedSeats = seats.filter(s => s.status === 'selected')
   const pricePerSeat = 45
@@ -292,6 +666,20 @@ function Buy() {
     }
   }
   const makePDF = async () => {
+    if (!selHorarioId) { alert('Selecciona un horario'); return }
+    const toBlock = selectedSeats.map(s => s.id)
+    try {
+      const res = await fetch(`${API}/api/reservas/bloquear-multiple`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ seats: toBlock, id_horario: selHorarioId }) })
+      const ok = res.ok
+      const json = ok ? await res.json() : null
+      if (ok && json && json.success) {
+        setSeats(prev => prev.map(s => toBlock.includes(s.id) ? { ...s, status: 'occupied' } : s))
+      } else {
+        alert('Algunos asientos ya están usados')
+        await fetchSeats(selHorarioId)
+        return
+      }
+    } catch { alert('Error de red'); return }
     const doc = new jsPDF({ unit: 'pt', format: 'a4' })
     const margin = 40
     const width = doc.internal.pageSize.getWidth()
@@ -487,15 +875,33 @@ function Home() {
 
 function Login() {
   const navigate = useNavigate()
+  const loc = useLocation()
+  const qs = new URLSearchParams(loc.search)
+  const initialMsg = qs.get('msg') || ''
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [showForm, setShowForm] = useState(false)
+  const [success, setSuccess] = useState(initialMsg)
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!email || !password) { setError('Completa todos los campos'); return }
-    setError('')
-    navigate('/')
+    ;(async () => {
+      try {
+        const res = await fetch(`${API}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) })
+        const json = await res.json()
+        if (!res.ok || !json.success) { setError(json.message || 'Error al iniciar sesión'); return }
+        localStorage.setItem('auth_token', String(json.token))
+        setError('')
+        setSuccess('Inicio de sesión exitoso')
+        try {
+          const base = String(json.token).split('.')[1] || ''
+          const payload = JSON.parse(atob(base.replace(/-/g, '+').replace(/_/g, '/')))
+          const admin = !!payload.admin
+          setTimeout(() => navigate(admin ? '/admin' : '/'), 600)
+        } catch { navigate('/') }
+      } catch { setError('Error de red') }
+    })()
   }
   return (
     <div className="AuthWrap">
@@ -504,6 +910,7 @@ function Login() {
       </div>
       {!showForm ? (
         <div className="LoginLanding">
+          {success && <div className="FormSuccess">{success}</div>}
           <h1 className="LoginTitle">Inicia sesión o crea una cuenta en <span className="BrandClub">CLUB</span> <span className="BrandSayab">SAYAB</span></h1>
           <p className="LoginSubtitle">¿Ya tienes tu cuenta digital?</p>
           <button className="LoginPrimary" onClick={() => setShowForm(true)}>Inicia sesión</button>
@@ -513,6 +920,7 @@ function Login() {
       ) : (
         <div className="AuthCard">
           <h1 className="AuthTitle">Iniciar sesión</h1>
+          {success && <div className="FormSuccess">{success}</div>}
           <form className="AuthForm" onSubmit={submit}>
             <div className="InputRow">
               <label className="InputLabel">Correo</label>
@@ -546,8 +954,15 @@ function Register() {
     e.preventDefault()
     if (!name || !email || !password || !confirm) { setError('Completa todos los campos'); return }
     if (password !== confirm) { setError('Las contraseñas no coinciden'); return }
-    setError('')
-    navigate('/login')
+    ;(async () => {
+      try {
+        const res = await fetch(`${API}/api/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, password }) })
+        const json = await res.json()
+        if (!res.ok || !json.success) { setError(json.message || 'Error al registrar'); return }
+        setError('')
+        navigate('/login?msg=Registro%20exitoso')
+      } catch { setError('Error de red') }
+    })()
   }
   return (
     <div className="AuthWrap">
@@ -628,12 +1043,89 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/detalle/:id" element={<Detail />} />
-        <Route path="/comprar/:id" element={<Buy />} />
+        <Route path="/comprar/:id" element={<RequireAuth><Buy /></RequireAuth>} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/perfil" element={<Profile />} />
+        <Route path="/admin" element={<RequireAdmin><Dashboard /></RequireAdmin>} />
       </Routes>
       <Footer />
     </Router>
+  )
+}
+function RequireAuth({ children }: { children: React.ReactElement }) {
+  const has = typeof window !== 'undefined' ? !!localStorage.getItem('auth_token') : false
+  if (!has) return <Navigate to="/login" replace />
+  return children
+}
+function RequireAdmin({ children }: { children: React.ReactElement }) {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') || '' : ''
+  if (!token) return <Navigate to="/login" replace />
+  const base = token.split('.')[1] || ''
+  let payload: unknown = null
+  try { payload = JSON.parse(atob(base.replace(/-/g, '+').replace(/_/g, '/'))) } catch { payload = null }
+  const p = payload as { admin?: boolean } | null
+  if (!p) return <Navigate to="/login" replace />
+  if (p && p.admin) return children
+  return <Navigate to="/" replace />
+}
+function Profile() {
+  const navigate = useNavigate()
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') || '' : ''
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const res = await fetch(`${API}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+        const json = await res.json()
+        if (!res.ok || !json.success) { setError('No autenticado'); return }
+        setName(String(json.data.name || ''))
+        setEmail(String(json.data.email || ''))
+      } catch { setError('Error de red') }
+    })()
+  }, [token])
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault()
+    ;(async () => {
+      try {
+        const res = await fetch(`${API}/api/auth/me`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ name, password: password || undefined }) })
+        const json = await res.json()
+        if (!res.ok || !json.success) { setError('No se pudo actualizar'); return }
+        if (json.token) localStorage.setItem('auth_token', String(json.token))
+        setPassword('')
+        setError('')
+        navigate('/')
+      } catch { setError('Error de red') }
+    })()
+  }
+  return (
+    <div className="Page">
+      <h2 className="SectionTitle">Mi perfil</h2>
+      <div className="AuthCard">
+        <form className="AuthForm" onSubmit={submit}>
+          <div className="InputRow">
+            <label className="InputLabel">Nombre</label>
+            <input className="TextInput" type="text" value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div className="InputRow">
+            <label className="InputLabel">Correo</label>
+            <input className="TextInput" type="email" value={email} readOnly />
+          </div>
+          <div className="InputRow">
+            <label className="InputLabel">Nueva contraseña</label>
+            <input className="TextInput" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Opcional" />
+          </div>
+          {error && <div className="FormError">{error}</div>}
+          <div className="FormActions">
+            <button className="SubmitBtn" type="submit">Guardar cambios</button>
+            <button className="SecondaryBtn" type="button" onClick={() => navigate('/')}>Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
   )
 }
 const ITEMS = [
