@@ -174,6 +174,27 @@ app.get('/api/admin/users', requireAdmin, async (_req: Request, res: Response) =
     return res.json({ success: true, data })
   } catch (_e) { return res.status(500).json({ success: false }) }
 })
+app.delete('/api/admin/users/:id', requireAdmin, async (req: Request, res: Response) => {
+  const id = Number(req.params.id)
+  if (!id) return res.status(400).json({ success: false })
+  const current = (req as any).user?.sub
+  try {
+    if (Number(current) === id) return res.status(409).json({ success: false, message: 'No puedes eliminar tu propia cuenta' })
+    await db.execute(`DELETE FROM \`${USERS_TABLE}\` WHERE \`${COL_ID}\` = ? AND es_admin = 1`, [id])
+    return res.status(204).send()
+  } catch (_e) { return res.status(500).json({ success: false }) }
+})
+app.post('/api/admin/users/delete', requireAdmin, async (req: Request, res: Response) => {
+  const { id } = req.body || {}
+  const numId = Number(id)
+  if (!numId) return res.status(400).json({ success: false })
+  const current = Number((req as any).user?.sub)
+  try {
+    if (current === numId) return res.status(409).json({ success: false, message: 'No puedes eliminar tu propia cuenta' })
+    await db.execute(`DELETE FROM \`${USERS_TABLE}\` WHERE \`${COL_ID}\` = ? AND es_admin = 1`, [numId])
+    return res.json({ success: true })
+  } catch (_e) { return res.status(500).json({ success: false }) }
+})
 app.get('/api/cortos', async (_req: Request, res: Response) => {
   try {
     const [rows] = await db.execute('SELECT id, titulo, clasificacion, duracionMinutos, categoria, sinopsis FROM cortos') as [RowDataPacket[], any]
@@ -198,7 +219,7 @@ app.get('/api/horarios', async (_req: Request, res: Response) => {
 })
 app.post('/api/horarios', requireAdmin, async (req: Request, res: Response) => {
   const { titulo, fecha, horaInicio, id_sala, descripcion, duracion_minutos } = req.body || {}
-  if (!titulo || !fecha || !horaInicio || !id_sala) return res.status(400).json({ success: false })
+  if (!titulo || !fecha || !horaInicio || !id_sala) return res.status(400).json({ success: false, message: 'Faltan campos requeridos: titulo, fecha, horaInicio, id_sala' })
   try {
     const [r]: any = await db.execute(
       'INSERT INTO funciones (titulo, descripcion, duracion_minutos, fecha_proyeccion, hora_proyeccion, id_sala) VALUES (?, ?, ?, ?, ?, ?)',
@@ -206,7 +227,7 @@ app.post('/api/horarios', requireAdmin, async (req: Request, res: Response) => {
     )
     const id = Number(r.insertId || 0)
     return res.status(201).json({ success: true, data: { id } })
-  } catch (_e) { return res.status(500).json({ success: false }) }
+  } catch (_e) { return res.status(500).json({ success: false, message: 'Error al crear el horario' }) }
 })
 app.put('/api/horarios/:id', requireAdmin, async (req: Request, res: Response) => {
   const id = Number(req.params.id)

@@ -44,28 +44,26 @@ async function ensureAsientosBlockColumn() {
     catch (_e) { }
 }
 ensureAsientosBlockColumn();
+async function ensureAdminAccount() {
+    try {
+        const email = 'admin@planetario.local';
+        const [rows] = await db.execute(`SELECT \`${COL_ID}\` as id FROM \`${USERS_TABLE}\` WHERE \`${COL_EMAIL}\` = ?`, [email]);
+        if (rows.length === 0) {
+            const hash = await bcrypt.hash('1234', 10);
+            await db.execute(`INSERT INTO \`${USERS_TABLE}\` (\`${COL_NAME}\`, \`${COL_EMAIL}\`, \`${COL_PWHASH}\`, es_admin) VALUES (?, ?, ?, 1)`, ['Administrador', email, hash]);
+        }
+    }
+    catch (_e) { }
+}
+ensureAdminAccount();
 async function releaseExpiredSeats() {
     try {
-        await db.execute("UPDATE `asientos` SET `estado`='libre', `id_horario`=NULL WHERE `estado`='bloqueado' AND `bloqueado_hasta` IS NOT NULL AND `bloqueado_hasta` < NOW()");
+        await db.execute("UPDATE `asientos` SET `estado`='libre' WHERE `estado`='bloqueado' AND `bloqueado_hasta` IS NOT NULL AND `bloqueado_hasta` < NOW()");
     }
     catch (_e) { }
 }
 setInterval(releaseExpiredSeats, 60000);
-// Datos en Memoria (Simulación para CRUD en Horarios)
-const hoy = new Date().toISOString().split('T')[0];
-const cortos = [
-    { id: 1, titulo: 'Corto Astronomía', director: 'Equipo Planetario', duracionMinutos: 15, sinopsis: 'Introducción a las constelaciones', clasificacion: 'A', categoria: 'Divulgación', trailerUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ', lanzamiento: hoy },
-    { id: 2, titulo: 'Ciencia y Universo', director: 'Equipo Planetario', duracionMinutos: 20, sinopsis: 'Viaje por el sistema solar', clasificacion: 'A', categoria: 'Educativo', trailerUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ', lanzamiento: hoy }
-];
-const _horarios = [
-    { id: 1, cortoId: 1, fecha: hoy, horaInicio: '10:00:00', horaFin: '10:15:00', sala: 'Sala 1', precioEntrada: 50, capacidadDisponible: 30 },
-    { id: 2, cortoId: 1, fecha: hoy, horaInicio: '12:00:00', horaFin: '12:15:00', sala: 'Sala 1', precioEntrada: 50, capacidadDisponible: 30 },
-    { id: 3, cortoId: 2, fecha: hoy, horaInicio: '14:00:00', horaFin: '14:20:00', sala: 'Sala 2', precioEntrada: 50, capacidadDisponible: 30 }
-];
-const _noticias = [
-    { id: 1, titulo: 'Nueva proyección inmersiva', resumen: 'Experiencia 360° en el domo.', fechaPublicacion: hoy },
-    { id: 2, titulo: 'Semana de astronomía', resumen: 'Charlas y cortos especiales.', fechaPublicacion: hoy }
-];
+// Datos de ejemplo eliminados. Las rutas usan tablas reales.
 // ----------------------------------------------------------------------
 // RUTAS GET Y CRUD PARA HORARIOS (ACTIVIDAD 8)
 // ----------------------------------------------------------------------
@@ -118,6 +116,22 @@ function readToken(req) {
         return parts[1];
     return '';
 }
+function requireAdmin(req, res, next) {
+    const t = readToken(req);
+    if (!t)
+        return res.status(401).json({ success: false });
+    try {
+        const payload = jwt.verify(t, JWT_SECRET);
+        if (payload && payload.admin) {
+            req.user = payload;
+            return next();
+        }
+        return res.status(403).json({ success: false });
+    }
+    catch {
+        return res.status(401).json({ success: false });
+    }
+}
 app.get('/api/auth/me', async (req, res) => {
     const t = readToken(req);
     if (!t)
@@ -165,70 +179,180 @@ app.put('/api/auth/me', async (req, res) => {
         return res.status(401).json({ success: false });
     }
 });
-app.get('/api/cortos', (_req, res) => res.json({ success: true, data: cortos }));
-app.get('/api/horarios', (_req, res) => res.json({ success: true, data: _horarios }));
-app.get('/api/asientos', async (req, res) => {
-    const id_horario = Number(req.query.horario || 0);
+app.post('/api/admin/users', requireAdmin, async (req, res) => {
+    const { name, email, password } = req.body || {};
+    if (!name || !email || !password)
+        return res.status(400).json({ success: false });
     try {
-        await releaseExpiredSeats();
-        if (id_horario > 0) {
-            const [rows] = await db.execute('SELECT id_asiento, estado FROM asientos WHERE id_horario = ?', [id_horario]);
-            return res.json({ success: true, data: rows });
-        }
-        const [rows] = await db.execute('SELECT id_asiento, estado FROM asientos');
+        const [rows] = await db.execute(`SELECT \`${COL_ID}\` as id FROM \`${USERS_TABLE}\` WHERE \`${COL_EMAIL}\` = ?`, [email]);
+        if (rows.length > 0)
+            return res.status(409).json({ success: false, message: 'Correo ya registrado' });
+        const hash = await bcrypt.hash(String(password), 10);
+        await db.execute(`INSERT INTO \`${USERS_TABLE}\` (\`${COL_NAME}\`, \`${COL_EMAIL}\`, \`${COL_PWHASH}\`, es_admin) VALUES (?, ?, ?, 1)`, [name, email, hash]);
+        return res.status(201).json({ success: true });
+    }
+    catch (_e) {
+        return res.status(500).json({ success: false });
+    }
+});
+app.get('/api/admin/users', requireAdmin, async (_req, res) => {
+    try {
+        const [rows] = await db.execute(`SELECT \`${COL_ID}\` as id, \`${COL_NAME}\` as name, \`${COL_EMAIL}\` as email, es_admin FROM \`${USERS_TABLE}\` WHERE es_admin = 1`);
+        const data = rows.map(r => ({ id: Number(r.id), name: String(r.name), email: String(r.email) }));
+        return res.json({ success: true, data });
+    }
+    catch (_e) {
+        return res.status(500).json({ success: false });
+    }
+});
+app.delete('/api/admin/users/:id', requireAdmin, async (req, res) => {
+    const id = Number(req.params.id);
+    if (!id)
+        return res.status(400).json({ success: false });
+    const current = req.user?.sub;
+    try {
+        if (Number(current) === id)
+            return res.status(409).json({ success: false, message: 'No puedes eliminar tu propia cuenta' });
+        await db.execute(`DELETE FROM \`${USERS_TABLE}\` WHERE \`${COL_ID}\` = ? AND es_admin = 1`, [id]);
+        return res.status(204).send();
+    }
+    catch (_e) {
+        return res.status(500).json({ success: false });
+    }
+});
+app.post('/api/admin/users/delete', requireAdmin, async (req, res) => {
+    const { id } = req.body || {};
+    const numId = Number(id);
+    if (!numId)
+        return res.status(400).json({ success: false });
+    const current = Number(req.user?.sub);
+    try {
+        if (current === numId)
+            return res.status(409).json({ success: false, message: 'No puedes eliminar tu propia cuenta' });
+        await db.execute(`DELETE FROM \`${USERS_TABLE}\` WHERE \`${COL_ID}\` = ? AND es_admin = 1`, [numId]);
+        return res.json({ success: true });
+    }
+    catch (_e) {
+        return res.status(500).json({ success: false });
+    }
+});
+app.get('/api/cortos', async (_req, res) => {
+    try {
+        const [rows] = await db.execute('SELECT id, titulo, clasificacion, duracionMinutos, categoria, sinopsis FROM cortos');
         return res.json({ success: true, data: rows });
     }
     catch (_e) {
         return res.status(500).json({ success: false });
     }
 });
-// POST: Crear Nuevo Horario (Actividad 8)
-app.post('/api/horarios', (req, res) => {
-    const { id: ignoredId, ...datosSinId } = req.body; // <-- CORRECCIÓN #2: Usamos ignoredId para ignorar la variable 'id'
-    const nuevoHorarioData = datosSinId;
-    if (!nuevoHorarioData.cortoId || !nuevoHorarioData.fecha || !nuevoHorarioData.horaInicio || !nuevoHorarioData.sala) {
-        return res.status(400).json({ success: false, message: 'Faltan campos obligatorios para el nuevo horario.' });
-    }
-    // Lógica de generación de ID y adición al array
-    const nuevoId = _horarios.length > 0 ? Math.max(..._horarios.map(h => h.id)) + 1 : 1;
-    const nuevoHorario = {
-        ...datosSinId,
-        cortoId: Number(nuevoHorarioData.cortoId),
-        precioEntrada: Number(nuevoHorarioData.precioEntrada || 0),
-        capacidadDisponible: Number(nuevoHorarioData.capacidadDisponible || 0),
-        id: nuevoId,
-    };
-    _horarios.push(nuevoHorario);
-    res.status(201).json({ success: true, data: nuevoHorario });
-});
-// PUT: Actualizar Horario Existente
-app.put('/api/horarios/:id', (req, res) => {
+app.get('/api/cortos/:id', async (req, res) => {
     const id = Number(req.params.id);
-    const datosNuevos = req.body;
-    const index = _horarios.findIndex(h => h.id === id);
-    if (index === -1) {
-        return res.status(404).json({ success: false, message: 'Horario no encontrado para actualizar.' });
+    try {
+        const [rows] = await db.execute('SELECT id, titulo, clasificacion, duracionMinutos, categoria, sinopsis FROM cortos WHERE id = ?', [id]);
+        if (rows.length === 0)
+            return res.status(404).json({ success: false });
+        return res.json({ success: true, data: rows[0] });
     }
-    const horarioActualizado = {
-        ..._horarios[index],
-        ...datosNuevos,
-        cortoId: datosNuevos.cortoId !== undefined ? Number(datosNuevos.cortoId) : _horarios[index].cortoId,
-        precioEntrada: datosNuevos.precioEntrada !== undefined ? Number(datosNuevos.precioEntrada) : _horarios[index].precioEntrada,
-        capacidadDisponible: datosNuevos.capacidadDisponible !== undefined ? Number(datosNuevos.capacidadDisponible) : _horarios[index].capacidadDisponible,
-    };
-    _horarios[index] = horarioActualizado;
-    res.status(200).json({ success: true, data: horarioActualizado });
+    catch (_e) {
+        return res.status(500).json({ success: false });
+    }
 });
-// DELETE: Eliminar Horario
-app.delete('/api/horarios/:id', (req, res) => {
+app.get('/api/horarios', async (_req, res) => {
+    try {
+        const [rows] = await db.execute('SELECT id_funcion AS id, id_funcion AS cortoId, fecha_proyeccion AS fecha, hora_proyeccion AS horaInicio, titulo, id_sala FROM funciones');
+        return res.json({ success: true, data: rows });
+    }
+    catch (_e) {
+        return res.status(500).json({ success: false });
+    }
+});
+app.post('/api/horarios', requireAdmin, async (req, res) => {
+    const { titulo, fecha, horaInicio, id_sala, descripcion, duracion_minutos } = req.body || {};
+    if (!titulo || !fecha || !horaInicio || !id_sala)
+        return res.status(400).json({ success: false, message: 'Faltan campos requeridos: titulo, fecha, horaInicio, id_sala' });
+    try {
+        const [r] = await db.execute('INSERT INTO funciones (titulo, descripcion, duracion_minutos, fecha_proyeccion, hora_proyeccion, id_sala) VALUES (?, ?, ?, ?, ?, ?)', [String(titulo), descripcion || null, duracion_minutos || null, String(fecha), String(horaInicio), Number(id_sala)]);
+        const id = Number(r.insertId || 0);
+        return res.status(201).json({ success: true, data: { id } });
+    }
+    catch (_e) {
+        return res.status(500).json({ success: false, message: 'Error al crear el horario' });
+    }
+});
+app.put('/api/horarios/:id', requireAdmin, async (req, res) => {
     const id = Number(req.params.id);
-    const index = _horarios.findIndex(h => h.id === id);
-    if (index === -1) {
-        return res.status(404).json({ success: false, message: 'Horario no encontrado para eliminar.' });
+    const { titulo, fecha, horaInicio, id_sala, descripcion, duracion_minutos } = req.body || {};
+    if (!id)
+        return res.status(400).json({ success: false });
+    const fields = [];
+    const values = [];
+    if (titulo !== undefined) {
+        fields.push('titulo = ?');
+        values.push(String(titulo));
     }
-    _horarios.splice(index, 1);
-    res.status(204).send(); // 204 No Content: éxito en la eliminación
+    if (descripcion !== undefined) {
+        fields.push('descripcion = ?');
+        values.push(descripcion || null);
+    }
+    if (duracion_minutos !== undefined) {
+        fields.push('duracion_minutos = ?');
+        values.push(duracion_minutos || null);
+    }
+    if (fecha !== undefined) {
+        fields.push('fecha_proyeccion = ?');
+        values.push(String(fecha));
+    }
+    if (horaInicio !== undefined) {
+        fields.push('hora_proyeccion = ?');
+        values.push(String(horaInicio));
+    }
+    if (id_sala !== undefined) {
+        fields.push('id_sala = ?');
+        values.push(Number(id_sala));
+    }
+    if (fields.length === 0)
+        return res.status(400).json({ success: false });
+    values.push(id);
+    try {
+        await db.execute(`UPDATE funciones SET ${fields.join(', ')} WHERE id_funcion = ?`, values);
+        return res.json({ success: true });
+    }
+    catch (_e) {
+        return res.status(500).json({ success: false });
+    }
 });
+app.delete('/api/horarios/:id', requireAdmin, async (req, res) => {
+    const id = Number(req.params.id);
+    if (!id)
+        return res.status(400).json({ success: false });
+    try {
+        const [rows] = await db.execute('DELETE FROM funciones WHERE id_funcion = ?', [id]);
+        return res.status(204).send();
+    }
+    catch (_e) {
+        return res.status(500).json({ success: false });
+    }
+});
+app.get('/api/asientos', async (req, res) => {
+    const id_horario = Number(req.query.horario || 0);
+    try {
+        await releaseExpiredSeats();
+        if (id_horario > 0) {
+            const [frows] = await db.execute('SELECT id_sala FROM funciones WHERE id_funcion = ?', [id_horario]);
+            if (frows.length === 0)
+                return res.json({ success: true, data: [] });
+            const id_sala = Number(frows[0].id_sala);
+            const [rows] = await db.execute('SELECT CONCAT(fila, columna) AS id_asiento, estado FROM asientos WHERE id_horario = ? AND id_sala = ?', [id_horario, id_sala]);
+            return res.json({ success: true, data: rows });
+        }
+        const [rows] = await db.execute('SELECT CONCAT(fila, columna) AS id_asiento, estado FROM asientos');
+        return res.json({ success: true, data: rows });
+    }
+    catch (_e) {
+        return res.status(500).json({ success: false });
+    }
+});
+// CRUD de horarios de ejemplo eliminado.
 // ----------------------------------------------------------------------
 // LÓGICA DE BLOQUEO DE ASIENTOS - ACTIVIDAD 9
 // ----------------------------------------------------------------------
@@ -241,20 +365,36 @@ app.post('/api/reservas/bloquear', async (req, res) => {
     try {
         connection = await db.getConnection();
         await connection.beginTransaction();
-        // 2. VERIFICAR EL ESTADO Y BLOQUEAR CON FOR UPDATE
-        const [rows] = await connection.execute(`SELECT estado FROM asientos WHERE id_asiento = ? FOR UPDATE`, [id_asiento]);
+        const [rfun] = await connection.execute('SELECT id_sala FROM funciones WHERE id_funcion = ?', [id_horario]);
+        if (rfun.length === 0) {
+            await connection.rollback();
+            return res.status(400).json({ success: false });
+        }
+        const id_sala = Number(rfun[0].id_sala);
+        const m = String(id_asiento).match(/^([A-Za-z]+)(\d+)$/);
+        const fila = m ? String(m[1]).toUpperCase() : null;
+        const columna = m ? Number(m[2]) : null;
+        const [rows] = await connection.execute(`SELECT estado, bloqueado_hasta FROM asientos WHERE id_asiento = ? AND id_horario = ? FOR UPDATE`, [id_asiento, id_horario]);
         if (rows.length === 0) {
-            await connection.execute(`INSERT INTO asientos (id_asiento, estado, id_horario, bloqueado_hasta) VALUES (?, 'bloqueado', ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE))`, [id_asiento, id_horario]);
+            if (!fila || !Number.isFinite(columna)) {
+                await connection.rollback();
+                return res.status(400).json({ success: false });
+            }
+            await connection.execute(`INSERT INTO asientos (id_asiento, fila, columna, id_sala, estado, id_horario, bloqueado_hasta) VALUES (?, ?, ?, ?, 'bloqueado', ?, DATE_ADD(NOW(), INTERVAL 15 MINUTE))`, [id_asiento, fila, columna, id_sala, id_horario]);
             await connection.commit();
             return res.status(200).json({ success: true, message: 'Asiento creado y bloqueado.' });
         }
         const asientoActual = rows[0];
-        if (String(asientoActual.estado) !== 'libre') {
-            await connection.rollback();
-            return res.status(409).json({ success: false, message: `Asiento ya está ${asientoActual.estado}. Doble venta evitada.` });
+        const estado = String(asientoActual.estado || 'libre');
+        const bh = asientoActual.bloqueado_hasta ? new Date(asientoActual.bloqueado_hasta) : null;
+        const expirado = estado === 'bloqueado' && bh !== null && bh.getTime() < Date.now();
+        if (estado === 'libre' || expirado) {
+            await connection.execute(`UPDATE asientos SET estado = 'bloqueado', id_sala = ?, id_horario = ?, bloqueado_hasta = DATE_ADD(NOW(), INTERVAL 15 MINUTE) WHERE id_asiento = ? AND id_horario = ?`, [id_sala, id_horario, id_asiento, id_horario]);
         }
-        // 4. ACTUALIZAR ESTADO A BLOQUEADO
-        await connection.execute(`UPDATE asientos SET estado = 'bloqueado', id_horario = ?, bloqueado_hasta = DATE_ADD(NOW(), INTERVAL 10 MINUTE) WHERE id_asiento = ?`, [id_horario, id_asiento]);
+        else {
+            await connection.rollback();
+            return res.status(409).json({ success: false, message: `Asiento ya está ${estado}. Doble venta evitada.` });
+        }
         await connection.commit();
         res.status(200).json({
             success: true,
@@ -267,6 +407,139 @@ app.post('/api/reservas/bloquear', async (req, res) => {
             await connection.rollback();
         }
         res.status(500).json({ success: false, message: 'Error interno del servidor.' });
+    }
+    finally {
+        if (connection)
+            connection.release();
+    }
+});
+app.post('/api/reservas/liberar', async (req, res) => {
+    const { id_asiento, id_horario } = req.body;
+    let connection;
+    if (!id_asiento || !id_horario) {
+        return res.status(400).json({ success: false });
+    }
+    try {
+        connection = await db.getConnection();
+        await connection.beginTransaction();
+        const [rows] = await connection.execute(`SELECT estado FROM asientos WHERE id_asiento = ? AND id_horario = ? FOR UPDATE`, [id_asiento, id_horario]);
+        if (rows.length === 0) {
+            await connection.commit();
+            return res.json({ success: true });
+        }
+        const estado = String(rows[0].estado || 'libre');
+        if (estado === 'bloqueado') {
+            await connection.execute(`UPDATE asientos SET estado = 'libre', bloqueado_hasta = NULL WHERE id_asiento = ? AND id_horario = ?`, [id_asiento, id_horario]);
+            await connection.commit();
+            return res.json({ success: true });
+        }
+        await connection.rollback();
+        return res.status(409).json({ success: false });
+    }
+    catch (_e) {
+        if (connection) {
+            await connection.rollback();
+        }
+        return res.status(500).json({ success: false });
+    }
+    finally {
+        if (connection)
+            connection.release();
+    }
+});
+app.post('/api/reservas/bloquear-multiple', async (req, res) => {
+    const { seats, id_horario } = req.body;
+    let connection;
+    if (!Array.isArray(seats) || seats.length === 0 || !id_horario)
+        return res.status(400).json({ success: false });
+    try {
+        connection = await db.getConnection();
+        await connection.beginTransaction();
+        const [rfun] = await connection.execute('SELECT id_sala FROM funciones WHERE id_funcion = ?', [id_horario]);
+        if (rfun.length === 0) {
+            await connection.rollback();
+            return res.status(400).json({ success: false });
+        }
+        const id_sala = Number(rfun[0].id_sala);
+        const expireAt = new Date(Date.now() + 15 * 60 * 1000);
+        const expireAtStr = expireAt.toISOString().slice(0, 19).replace('T', ' ');
+        const conflicts = [];
+        for (const id_asiento of seats) {
+            const m = String(id_asiento).match(/^([A-Za-z]+)(\d+)$/);
+            const fila = m ? String(m[1]).toUpperCase() : null;
+            const columna = m ? Number(m[2]) : null;
+            if (!fila || !Number.isFinite(columna)) {
+                conflicts.push(id_asiento);
+                continue;
+            }
+            const [rows] = await connection.execute(`SELECT estado, bloqueado_hasta FROM asientos WHERE id_asiento = ? AND id_horario = ? FOR UPDATE`, [id_asiento, id_horario]);
+            if (rows.length === 0) {
+                await connection.execute(`INSERT INTO asientos (id_asiento, fila, columna, id_sala, estado, id_horario, bloqueado_hasta) VALUES (?, ?, ?, ?, 'bloqueado', ?, ?)`, [id_asiento, fila, columna, id_sala, id_horario, expireAtStr]);
+                continue;
+            }
+            const row = rows[0];
+            const estado = String(row.estado || 'libre');
+            const bh = row.bloqueado_hasta ? new Date(row.bloqueado_hasta) : null;
+            const expirado = estado === 'bloqueado' && bh !== null && bh.getTime() < Date.now();
+            if (estado === 'libre' || expirado) {
+                await connection.execute(`UPDATE asientos SET estado = 'bloqueado', id_sala = ?, bloqueado_hasta = ? WHERE id_asiento = ? AND id_horario = ?`, [id_sala, expireAtStr, id_asiento, id_horario]);
+            }
+            else {
+                conflicts.push(id_asiento);
+            }
+        }
+        if (conflicts.length > 0) {
+            await connection.rollback();
+            return res.status(409).json({ success: false, conflicts });
+        }
+        await connection.commit();
+        return res.json({ success: true, expire_at: expireAtStr });
+    }
+    catch (_e) {
+        if (connection)
+            await connection.rollback();
+        return res.status(500).json({ success: false });
+    }
+    finally {
+        if (connection)
+            connection.release();
+    }
+});
+app.post('/api/reservas/confirmar', async (req, res) => {
+    const { seats, id_horario } = req.body;
+    let connection;
+    if (!Array.isArray(seats) || seats.length === 0 || !id_horario)
+        return res.status(400).json({ success: false });
+    try {
+        connection = await db.getConnection();
+        await connection.beginTransaction();
+        const [rfun] = await connection.execute('SELECT id_sala FROM funciones WHERE id_funcion = ?', [id_horario]);
+        if (rfun.length === 0) {
+            await connection.rollback();
+            return res.status(400).json({ success: false });
+        }
+        const id_sala = Number(rfun[0].id_sala);
+        for (const id_asiento of seats) {
+            const [rows] = await connection.execute(`SELECT estado FROM asientos WHERE id_asiento = ? AND id_horario = ? FOR UPDATE`, [id_asiento, id_horario]);
+            if (rows.length === 0) {
+                const m = String(id_asiento).match(/^([A-Za-z]+)(\d+)$/);
+                const fila = m ? String(m[1]).toUpperCase() : null;
+                const columna = m ? Number(m[2]) : null;
+                if (!fila || !Number.isFinite(columna))
+                    continue;
+                await connection.execute(`INSERT INTO asientos (id_asiento, fila, columna, id_sala, estado, id_horario, bloqueado_hasta) VALUES (?, ?, ?, ?, 'ocupado', ?, NULL)`, [id_asiento, fila, columna, id_sala, id_horario]);
+            }
+            else {
+                await connection.execute(`UPDATE asientos SET estado = 'ocupado', bloqueado_hasta = NULL WHERE id_asiento = ? AND id_horario = ?`, [id_asiento, id_horario]);
+            }
+        }
+        await connection.commit();
+        return res.json({ success: true });
+    }
+    catch (_e) {
+        if (connection)
+            await connection.rollback();
+        return res.status(500).json({ success: false });
     }
     finally {
         if (connection)
